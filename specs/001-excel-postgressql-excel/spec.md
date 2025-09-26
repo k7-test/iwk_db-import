@@ -80,7 +80,7 @@ When creating this spec from a user prompt:
 - **FR-003**: システムMUST 設定ファイルに定義された シート名→テーブル名 マッピングに従い対応するシートのみを対象とする。
 - **FR-004**: システムMUST 各対象シートの2行目を列ヘッダ行として読み取り、3行目以降をデータ行として扱う。
 - **FR-005**: システムMUST 列ヘッダとDBテーブル列名が一致する前提でINSERT列集合を決定する。
-- **FR-006**: システムMUST 設定ファイルに定義されたPK自動採番列についてExcel入力値を無視し、シーケンスから値を取得する。
+- **FR-006**: システムMUST 設定ファイルに定義されたPK自動採番列についてExcel入力値を無視し、INSERT文から当該列を除外することでDBの DEFAULT(nextval/identity) により値を取得する (アプリ側で nextval を明示取得しない)。
 - **FR-007**: システムMUST 設定ファイルに定義されたFK伝播列 (親列→子列マッピング) のExcel入力値を無視し、親値を適用する。
 - **FR-008**: システムMUST 挿入時に発生したDB例外(制約違反等)をキャプチャし、当該ファイル処理を中止・ロールバックし、エラーログファイルへJSON Lines形式で詳細を書き出す。
 - **FR-009**: システムMUST 1ファイル処理失敗時も残りファイルの処理を継続する。
@@ -88,7 +88,7 @@ When creating this spec from a user prompt:
 - **FR-011**: システムMUST 処理完了後に成功ファイル数/失敗ファイル数/挿入行数合計/スキップシート数/処理時間合計を標準出力に要約表示する。
 - **FR-012**: システムMUST 設定ファイルでシーケンス名と自動採番列名を複数定義可能にする。
 - **FR-013**: システムMUST 設定ファイルで親テーブルからのFK伝播列マッピングを複数定義可能にする。
-- **FR-014**: システムMUST CLI単一コマンド(引数なし)で起動し、設定ファイルパスや対象フォルダパスは既定ロケーションを参照する。
+- **FR-014**: システムMUST CLI単一コマンド(引数なし)で起動し、設定ファイル `config/import.yml` (YAML形式) と対象フォルダ既定パスを利用する (環境変数で上書き可能)。
 - **FR-015**: システムMUST 設定ファイルが存在しない/不正形式の場合は処理を中断しエラー終了コードを返す。
 - **FR-016**: システムMUST 設定に存在するシートでExcel側に欠落する列がある場合ファイル全体をエラーとしロールバックする。
 - **FR-017**: システムMUST ログ出力先ディレクトリが存在しない場合は起動時に作成する。
@@ -100,6 +100,11 @@ When creating this spec from a user prompt:
 - **FR-023**: システムMUST タイムゾーンは設定ファイルで指定されない限りUTCを使用する。
 - **FR-024**: システムMUST 実行中の進行状況 (現在ファイル番号/総ファイル数, シート進行) を標準出力に表示する。
 - **FR-025**: システムMUST 対象フォルダにExcelが0件の場合は0件処理のサマリーを正常終了で表示する。
+- **FR-026**: システムMUST 設定ファイル `config/import.yml` に少なくとも `source_directory`, `sheet_mappings`(シート名→テーブル名), `sequences`(列名→シーケンス名), `fk_propagations`(親列→子列), 任意 `timezone` を含む構造を要求し、不足時は起動時致命的エラーとする。
+- **FR-027**: システムMUST DB接続は psycopg2 を用い、環境変数 (PGHOST, PGPORT, PGUSER, PGPASSWORD, PGDATABASE) を優先し不足項目のみ `config/import.yml` の `database:` セクション値で補完する。接続URLが両方に存在する場合は環境変数を採用する。
+- **FR-028**: システムMUST Excel読み込みは pandas を用いてシート単位に一括読込し (DataFrame 化)、読込後に列除外/無視列処理を行う。read_only ストリーミングは初版未対応とし、50,000行×40列想定でメモリ上限(QR-006)内に収まることを前提とする。
+- **FR-029**: システムMUST PKシーケンス列のINSERT結果(生成値)が後続FK伝播やサマリー集計に必要な場合のみ `RETURNING` 句で取得し、未使用列への無駄な RETURNING は行わない。
+- **FR-030**: システムMUST エラーログファイルは起動ごとに `logs/errors-YYYYMMDD-HHMMSS.log` (UTC) で生成し、各行JSONオブジェクト: `timestamp`(ISO8601), `file`, `sheet`, `row`, `error_type`, `db_message` を含む (追加キー禁止)。
 
 ### Quality & Performance Requirements
 - **QR-001**: コード品質ゲート (lint/format/static analysis) をCIで必須化し失敗時はマージ不可。
@@ -119,6 +124,14 @@ When creating this spec from a user prompt:
 - **RowData**: 1シートの1行の論理データ。属性: 行番号, 列名→値マップ, 無視列集合。
 - **ProcessingResult**: 集計用。属性: 成功ファイル数, 失敗ファイル数, 総挿入行数, スキップシート数, 開始時刻/終了時刻。
 - **ErrorRecord**: エラー行情報。属性: ファイル名, シート名, 行番号, 種別, メッセージ, タイムスタンプ。
+
+## Clarifications
+### Session 2025-09-26
+- Q: 設定ファイル形式と既定パスを確定したいです。どれにしますか？ → A: YAML形式 config/import.yml
+- Q: DB接続情報と使用ライブラリの扱いを確定したいです。どれにしますか？ → A: psycopg2 + 環境変数優先, 設定ファイルはフォールバック
+- Q: Excel 読込ライブラリと読み込み戦略 (性能/メモリ前提) を確定します。どれにしますか？ → A: pandas 一括読込 (シート毎 DataFrame) シンプル実装
+- Q: シーケンス列値の設定方式（DB側での自動採番処理方法）を確定します。どれにしますか？ → A: INSERT列除外でDB DEFAULT利用
+- Q: エラーログ(JSON Lines) のファイル命名とフィールド構成を確定してください。 → A: `logs/errors-YYYYMMDD-HHMMSS.log`; fields: timestamp,file,sheet,row,error_type,db_message
 
 ---
 
