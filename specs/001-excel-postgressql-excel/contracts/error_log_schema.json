@@ -1,0 +1,41 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://example.com/error-log.schema.json",
+  "title": "ErrorLogRecord",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "timestamp",
+    "file",
+    "sheet",
+    "row",
+    "error_type",
+    "db_message"
+  ],
+  "properties": {
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "UTC ISO8601"
+    },
+    "file": {
+      "type": "string"
+    },
+    "sheet": {
+      "type": "string"
+    },
+    "row": {
+      "type": "integer",
+      "minimum": -1,
+      "description": "行番号。不明な場合 -1"
+    },
+    "error_type": {
+      "type": "string",
+      "pattern": "^[A-Z0-9_]+$",
+      "description": "例: CONSTRAINT_VIOLATION | MISSING_COLUMN"
+    },
+    "db_message": {
+      "type": "string"
+    }
+  }
+}

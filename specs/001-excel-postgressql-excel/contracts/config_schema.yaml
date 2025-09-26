@@ -1,0 +1,67 @@
+# Config Schema (YAML) - import.yml 契約
+# FR-014, FR-026, FR-027 対応
+# このスキーマは人間可読な参照であり、実装では構造検証ロジック (例: pydantic / 手書きバリデーション) に変換される。
+
+version: 1
+
+required:
+  - source_directory
+  - sheet_mappings
+  - sequences
+  - fk_propagations
+  - database
+
+properties:
+  source_directory:
+    type: string
+    description: Excelファイル探索ディレクトリ (存在必須)
+  sheet_mappings:
+    type: object
+    description: シート名→テーブル名マッピング
+    patternProperties:
+      ".+":
+        type: object
+        required: [table]
+        properties:
+          table:
+            type: string
+            description: 対応するDBテーブル名
+          sequence_columns:
+            type: array
+            items: { type: string }
+            description: Excel値を無視しDB自動採番に任せる列
+          fk_propagation_columns:
+            type: array
+            items: { type: string }
+            description: 親テーブルから値を伝播する列
+  sequences:
+    type: object
+    description: 列名→シーケンス名 (情報用途; INSERTでは列除外)
+    patternProperties:
+      ".+": { type: string }
+  fk_propagations:
+    type: object
+    description: 親列→子列 (複数指定可)
+    patternProperties:
+      ".+": { type: string }
+  timezone:
+    type: string
+    description: 省略時UTC
+  database:
+    type: object
+    description: 環境変数不足時に補完される接続設定
+    properties:
+      host: { type: string }
+      port: { type: integer }
+      user: { type: string }
+      password: { type: string }
+      database: { type: string }
+      dsn: { type: string, description: "接続文字列 (環境変数優先)" }
+
+constraints:
+  - sequences.keys ⊆ 全シートの sequence_columns 合成集合
+  - fk_propagations.keys ⊆ 親シート列候補 (検証は実装側でシンプルに pass 可 初版)
+
+notes:
+  - 空の sequences / fk_propagations は許容。
+  - schema version 将来拡張用。
