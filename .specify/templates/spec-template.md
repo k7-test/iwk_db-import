@@ -18,8 +18,9 @@
 5. Generate Functional Requirements
    → Each requirement must be testable
    → Mark ambiguous requirements
-6. Identify Key Entities (if data involved)
-7. Run Review Checklist
+6. Capture Quality & Performance commitments (coverage targets, UX guarantees, performance budgets)
+7. Identify Key Entities (if data involved)
+8. Run Review Checklist
    → If any [NEEDS CLARIFICATION]: WARN "Spec has uncertainties"
    → If implementation details found: ERROR "Remove tech details"
 8. Return: SUCCESS (spec ready for planning)
@@ -29,6 +30,7 @@
 
 ## ⚡ Quick Guidelines
 - ✅ Focus on WHAT users need and WHY
+- ✅ State non-functional expectations (code quality, testing, UX, performance) explicitly
 - ❌ Avoid HOW to implement (no tech stack, APIs, code structure)
 - 👥 Written for business stakeholders, not developers
 
@@ -64,6 +66,7 @@ When creating this spec from a user prompt:
 ### Edge Cases
 - What happens when [boundary condition]?
 - How does system handle [error scenario]?
+- What throughput or responsiveness is guaranteed under peak load?
 
 ## Requirements *(mandatory)*
 
@@ -77,6 +80,13 @@ When creating this spec from a user prompt:
 *Example of marking unclear requirements:*
 - **FR-006**: System MUST authenticate users via [NEEDS CLARIFICATION: auth method not specified - email/password, SSO, OAuth?]
 - **FR-007**: System MUST retain user data for [NEEDS CLARIFICATION: retention period not specified]
+
+### Quality & Performance Requirements
+- **QR-001**: Solution MUST maintain code quality gates (linting, formatting, static analysis) with documented exceptions.
+- **QR-002**: Test coverage MUST remain ≥[coverage target]% and include unit, integration, and performance suites for critical paths.
+- **QR-003**: User workflows MUST deliver consistent messaging, help text, and error handling aligned with the constitution.
+- **QR-004**: Feature MUST meet throughput/latency budgets of [NEEDS CLARIFICATION: define numeric targets] under representative load.
+- **QR-005**: Instrumentation MUST capture metrics needed to verify the stated performance commitments.
 
 ### Key Entities *(include if feature involves data)*
 - **[Entity 1]**: [What it represents, key attributes without implementation]

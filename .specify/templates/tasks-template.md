@@ -17,7 +17,8 @@
    → Tests: contract tests, integration tests
    → Core: models, services, CLI commands
    → Integration: DB, middleware, logging
-   → Polish: unit tests, performance, docs
+   → Quality gates: instrumentation, UX consistency updates, performance validation
+   → Polish: unit tests, performance reports, docs
 4. Apply task rules:
    → Different files = mark [P] for parallel
    → Same file = sequential (no [P])
@@ -75,6 +76,8 @@
 - [ ] T021 [P] Update docs/api.md
 - [ ] T022 Remove duplication
 - [ ] T023 Run manual-testing.md
+- [ ] T024 [P] Update CLI help/UX documentation for new behaviour in docs/quickstart.md
+- [ ] T025 Instrument metrics/logging for new pathways and verify dashboards
 
 ## Dependencies
 - Tests (T004-T007) before implementation (T008-T014)
@@ -112,7 +115,11 @@ Task: "Integration test auth in tests/integration/test_auth.py"
    - Each story → integration test [P]
    - Quickstart scenarios → validation tasks
 
-4. **Ordering**:
+4. **From Quality Gates**:
+   - Ensure instrumentation tasks cover metrics/logging required by performance budgets
+   - Ensure UX/doc updates capture consistent commands, options, and error messaging
+
+5. **Ordering**:
    - Setup → Tests → Models → Services → Endpoints → Polish
    - Dependencies block parallel execution
 
@@ -125,3 +132,5 @@ Task: "Integration test auth in tests/integration/test_auth.py"
 - [ ] Parallel tasks truly independent
 - [ ] Each task specifies exact file path
 - [ ] No task modifies same file as another [P] task
+- [ ] Instrumentation and performance verification tasks included
+- [ ] UX/help documentation update tasks included

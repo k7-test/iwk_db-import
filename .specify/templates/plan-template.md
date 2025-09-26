@@ -47,7 +47,11 @@
 ## Constitution Check
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+- [ ] **Code Quality Baseline**: Plan enforces formatting, linting, code review ownership, and dependency justification.
+- [ ] **Test-First Delivery**: Plan schedules failing tests first, coverage protections, and CI enforcement.
+- [ ] **Consistent User Experience**: Plan documents UX flows, help text updates, and cross-surface consistency.
+- [ ] **Performance & Capacity Discipline**: Plan defines throughput/latency budgets and performance validation steps.
+- [ ] **Quality Gates & Metrics**: Plan lists required suites, instrumentation, and release reporting checkpoints.
 
 ## Project Structure
 
@@ -216,4 +220,4 @@ directories captured above]
 - [ ] Complexity deviations documented
 
 ---
-*Based on Constitution v2.1.1 - See `/memory/constitution.md`*
+*Based on Constitution v1.0.0 - See `.specify/memory/constitution.md`*
