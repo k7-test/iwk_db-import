@@ -36,7 +36,7 @@ def _make_excel_file(
 def multi_file_excel_setup(temp_workdir: Path, write_config: Any) -> Dict[str, Any]:
     """Create 2 Excel files with multiple sheets containing test data."""
     data_dir = temp_workdir / "data"
-    
+    data_dir.mkdir(parents=True, exist_ok=True)
     # File 1: customers.xlsx with 2 sheets
     customers_excel = _make_excel_file(
         data_dir, "customers.xlsx",
