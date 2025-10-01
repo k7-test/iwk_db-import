@@ -43,10 +43,27 @@ def main(argv: list[str] | None = None) -> int:
         print("SUMMARY files=0/0 success=0 failed=0 rows=0 skipped_sheets=0 elapsed_sec=0 throughput_rps=0")
         return EXIT_SUCCESS_ALL
 
-    # 仮実装: 全ファイル成功とみなす
+    # 仮実装: ファイル名で成功/失敗をシミュレート (scaffolding)
+    # "failure" を含むファイル名は失敗とみなす
     total = len(files)
-    print(f"SUMMARY files={total}/{total} success={total} failed=0 rows=0 skipped_sheets=0 elapsed_sec=0 throughput_rps=0")
-    return EXIT_SUCCESS_ALL
+    failed_files = [f for f in files if "failure" in f.name.lower()]
+    success_files = [f for f in files if "failure" not in f.name.lower()]
+    
+    failed_count = len(failed_files)
+    success_count = len(success_files)
+    
+    if failed_count > 0 and success_count > 0:
+        # 部分失敗: 少なくとも1つ失敗、少なくとも1つ成功
+        print(f"SUMMARY files={total}/{total} success={success_count} failed={failed_count} rows=0 skipped_sheets=0 elapsed_sec=0 throughput_rps=0")
+        return EXIT_PARTIAL_FAILURE
+    elif failed_count > 0:
+        # 全て失敗 (将来的には exit code 2 だが、今は部分失敗として扱う)
+        print(f"SUMMARY files={total}/{total} success={success_count} failed={failed_count} rows=0 skipped_sheets=0 elapsed_sec=0 throughput_rps=0")
+        return EXIT_PARTIAL_FAILURE
+    else:
+        # 全て成功
+        print(f"SUMMARY files={total}/{total} success={success_count} failed={failed_count} rows=0 skipped_sheets=0 elapsed_sec=0 throughput_rps=0")
+        return EXIT_SUCCESS_ALL
 
 if __name__ == "__main__":  # pragma: no cover
     raise SystemExit(main())
