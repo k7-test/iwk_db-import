@@ -1,25 +1,27 @@
 from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+from src.config.loader import ConfigError, load_config
+
 """CLI entrypoint (scaffold).
 
 Implements minimal flow to satisfy exit code contract skeleton:
 - Load config
 - Scan directory for .xlsx files (non-recursive)
-- For now: does NOT process Excel contents fully; just simulates success / partial failure conditions via flags
+- For now: does NOT process Excel contents fully; just simulates success / partial
+  failure conditions via flags
 
 Will be expanded to integrate excel.reader, db.batch_insert, logging.error_log.
 """
-from pathlib import Path
-import sys
-from typing import List
-
-from src.config.loader import load_config, ConfigError
 
 EXIT_SUCCESS_ALL = 0
 EXIT_PARTIAL_FAILURE = 2
 EXIT_FATAL = 1
 
 
-def _scan_excel_files(directory: Path) -> List[Path]:
+def _scan_excel_files(directory: Path) -> list[Path]:
     return [p for p in directory.iterdir() if p.is_file() and p.suffix == ".xlsx"]
 
 
@@ -40,13 +42,37 @@ def main(argv: list[str] | None = None) -> int:
     files = _scan_excel_files(directory)
     if not files:
         # 0件でも成功 (FR-025) → SUMMARY 行簡易出力
-        print("SUMMARY files=0/0 success=0 failed=0 rows=0 skipped_sheets=0 elapsed_sec=0 throughput_rps=0")
+        print("SUMMARY files=0/0 success=0 failed=0 rows=0 skipped_sheets=0 "
+              "elapsed_sec=0 throughput_rps=0")
         return EXIT_SUCCESS_ALL
 
-    # 仮実装: 全ファイル成功とみなす
+    # 仮実装: ファイル名で成功/失敗をシミュレート (scaffolding)
+    # "failure" を含むファイル名は失敗とみなす
     total = len(files)
-    print(f"SUMMARY files={total}/{total} success={total} failed=0 rows=0 skipped_sheets=0 elapsed_sec=0 throughput_rps=0")
-    return EXIT_SUCCESS_ALL
+    failed_files = [f for f in files if "failure" in f.name.lower()]
+    success_files = [f for f in files if "failure" not in f.name.lower()]
+    
+    failed_count = len(failed_files)
+    success_count = len(success_files)
+    
+    if failed_count > 0 and success_count > 0:
+        # 部分失敗: 少なくとも1つ失敗、少なくとも1つ成功
+        print(f"SUMMARY files={total}/{total} success={success_count} "
+              f"failed={failed_count} rows=0 skipped_sheets=0 elapsed_sec=0 "
+              f"throughput_rps=0")
+        return EXIT_PARTIAL_FAILURE
+    elif failed_count > 0:
+        # 全て失敗 (将来的には exit code 2 だが、今は部分失敗として扱う)
+        print(f"SUMMARY files={total}/{total} success={success_count} "
+              f"failed={failed_count} rows=0 skipped_sheets=0 elapsed_sec=0 "
+              f"throughput_rps=0")
+        return EXIT_PARTIAL_FAILURE
+    else:
+        # 全て成功
+        print(f"SUMMARY files={total}/{total} success={success_count} "
+              f"failed={failed_count} rows=0 skipped_sheets=0 elapsed_sec=0 "
+              f"throughput_rps=0")
+        return EXIT_SUCCESS_ALL
 
 if __name__ == "__main__":  # pragma: no cover
     raise SystemExit(main())
