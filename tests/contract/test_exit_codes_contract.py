@@ -35,6 +35,7 @@ def test_exit_code_all_success(temp_workdir: Path, write_config, dummy_excel_fil
         os.chdir(cwd_before)
     out = capsys.readouterr().out
     assert code == 0
+    assert code != 2  # Ensure no exit code 2 on pure success
     assert "SUMMARY files=2/2 success=2 failed=0" in out
 
 
