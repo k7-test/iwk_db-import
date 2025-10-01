@@ -115,7 +115,7 @@ def test_multi_file_run_success_integration(
     # Mock database operations to simulate successful inserts
     with patch('src.db.batch_insert.batch_insert') as mock_insert:
         # Configure mock to return successful insert results
-        mock_insert.return_value.inserted_rows = setup['expected_total_rows']
+        mock_insert.return_value = setup['expected_total_rows']
         
         cwd_before = os.getcwd()
         try:
