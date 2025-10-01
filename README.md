@@ -46,6 +46,17 @@ pytest
 - Error log schema: `contracts/error_log_schema.json`
 - Config schema: `contracts/config_schema.yaml`
 
+## Task Management
+
+This project has 40 implementation tasks organized in phases. To convert tasks to GitHub issues for tracking:
+
+```bash
+# Create all GitHub issues from tasks.md
+./scripts/batch_create_issues.sh
+```
+
+See [`docs/task-to-issue-conversion.md`](docs/task-to-issue-conversion.md) for detailed instructions.
+
 ## Next Steps
 - 実際の Excel 読込 (pandas) 実装
 - INSERT execute_values 実装 + バッチサイズ調整
