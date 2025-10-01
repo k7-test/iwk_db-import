@@ -1,9 +1,12 @@
 from __future__ import annotations
-"""Exit code contract tests (incrementally enabled)."""
+
+import re
 from pathlib import Path
-import pytest
 from pathlib import Path as _P
+
 from src.cli import main as cli_main
+
+"""Exit code contract tests (incrementally enabled)."""
 
 PROJECT_ROOT = _P(__file__).resolve().parents[2]  # /workspaces/iwk_db-import
 
@@ -65,7 +68,6 @@ def test_exit_code_partial_failure(temp_workdir: Path, write_config, capsys):
     assert "failed=" in out
     # At least one file should have failed (failed>0)
     # Extract failed count and verify it's > 0
-    import re
     match = re.search(r"failed=(\d+)", out)
     assert match is not None, f"No 'failed=' found in output: {out}"
     failed_count = int(match.group(1))
