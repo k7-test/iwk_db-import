@@ -103,18 +103,14 @@ def test_partial_failure_rollback_integration(
     setup = partial_failure_excel_setup
     
     # Mock database operations to simulate constraint violation for failing file
-    def mock_batch_insert_side_effect(*args, **kwargs):
-        # Extract filename from the call context (will need adjustment when real implementation exists)
-        # For now, simulate based on expected behavior
-        if "constraint_violation" in str(args):
-            # Simulate constraint violation
-            raise Exception("duplicate key value violates unique constraint 'customers_pkey'")
-        else:
-            # Simulate successful insert
-            return setup['expected_successful_rows']
-    
+    # Use side_effect list: first call raises constraint violation, second call returns success
+    mock_insert_side_effects = [
+        Exception("duplicate key value violates unique constraint 'customers_pkey'"),
+        setup['expected_successful_rows'],
+    ]
+
     with patch('src.db.batch_insert.batch_insert') as mock_insert:
-        mock_insert.side_effect = mock_batch_insert_side_effect
+        mock_insert.side_effect = mock_insert_side_effects
         
         # Mock error log to capture constraint violation
         with patch('src.logging.error_log.ErrorLogBuffer') as mock_error_log:
