@@ -12,6 +12,8 @@ from ..models.config_models import SheetMappingConfig as DomainSheetMappingConfi
 from ..models.excel_file import ExcelFile, FileStatus
 from ..models.processing_result import FileStat, ProcessingResult
 from ..models.sheet_process import SheetProcess
+# TODO: Add FK propagation service import for T023
+# from .fk_propagation import needs_returning, build_fk_propagation_maps, propagate_foreign_keys
 
 """Service orchestration for Excel -> PostgreSQL import tool.
 
@@ -395,7 +397,7 @@ def _process_single_sheet(
                 table=sheet_mapping.table_name,
                 columns=insert_columns,
                 rows=insert_rows,
-                returning=False,  # TODO: Handle FK propagation case later (T022)
+                returning=False,  # TODO: Use fk_propagation.needs_returning() (T023)
                 page_size=1000   # R-006 default batch size
             )
             inserted_rows = result.inserted_rows
