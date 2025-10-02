@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 from pathlib import Path as _P
+from unittest.mock import patch, MagicMock
 
 from src.cli import main as cli_main
 
@@ -27,12 +28,30 @@ def test_exit_code_fatal_startup(temp_workdir: Path, capsys):
 
 def test_exit_code_all_success(temp_workdir: Path, write_config, dummy_excel_files, capsys):
     import os
-    cwd_before = os.getcwd()
-    try:
-        os.chdir(temp_workdir)
-        code = cli_main([])
-    finally:
-        os.chdir(cwd_before)
+    
+    # Mock Excel processing to simulate successful processing
+    mock_sheet_data = MagicMock()
+    mock_sheet_data.columns = ["id", "name"]
+    mock_sheet_data.rows = [{"id": 1, "name": "Test"}]
+    
+    def mock_read_side_effect(path, target_sheets=None):
+        if "customers" in str(path):
+            return {"Customers": MagicMock()}
+        else:  # orders.xlsx
+            return {"Orders": MagicMock()}
+    
+    with patch('src.services.orchestrator.read_excel_file') as mock_read:
+        with patch('src.services.orchestrator.normalize_sheet') as mock_normalize:
+            mock_read.side_effect = mock_read_side_effect
+            mock_normalize.return_value = mock_sheet_data
+            
+            cwd_before = os.getcwd()
+            try:
+                os.chdir(temp_workdir)
+                code = cli_main([])
+            finally:
+                os.chdir(cwd_before)
+    
     out = capsys.readouterr().out
     assert code == 0
     assert code != 2  # Ensure no exit code 2 on pure success
@@ -43,21 +62,36 @@ def test_exit_code_partial_failure(temp_workdir: Path, write_config, capsys):
     """Test exit code 2 when some files fail but others succeed."""
     import os
     
-    # Create two Excel files - one will be simulated as failing
+    # Create two Excel files - one will be simulated as failing  
     data_dir = temp_workdir / "data"
     success_file = data_dir / "success.xlsx"
     failure_file = data_dir / "failure.xlsx"
     
-    # Create minimal Excel files (empty for now since CLI doesn't process content yet)
+    # Create minimal Excel files (content doesn't matter since we mock)
     success_file.write_bytes(b"")
     failure_file.write_bytes(b"")
     
-    cwd_before = os.getcwd()
-    try:
-        os.chdir(temp_workdir)
-        code = cli_main([])
-    finally:
-        os.chdir(cwd_before)
+    # Mock Excel processing - success file succeeds, failure file fails
+    mock_sheet_data = MagicMock()
+    mock_sheet_data.columns = ["id", "name"]
+    mock_sheet_data.rows = [{"id": 1, "name": "Test"}]
+    
+    def mock_read_side_effect(path, target_sheets=None):
+        if "failure" in str(path):
+            raise Exception("Simulated Excel read failure")
+        return {"Customers": MagicMock()}  # Success case
+    
+    with patch('src.services.orchestrator.read_excel_file') as mock_read:
+        with patch('src.services.orchestrator.normalize_sheet') as mock_normalize:
+            mock_read.side_effect = mock_read_side_effect
+            mock_normalize.return_value = mock_sheet_data
+            
+            cwd_before = os.getcwd()
+            try:
+                os.chdir(temp_workdir)
+                code = cli_main([])
+            finally:
+                os.chdir(cwd_before)
     
     out = capsys.readouterr().out
     
