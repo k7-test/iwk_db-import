@@ -1,11 +1,9 @@
 from __future__ import annotations
 
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
-import pytest
-
-from src.models.processing_result import FileStat, ProcessingResult
+from src.models.processing_result import ProcessingResult
 from src.services.summary import render_summary_line
 
 """Unit tests for summary rendering service (T026).
@@ -22,10 +20,10 @@ SUMMARY_PATTERN = re.compile(
 )
 
 
-def test_render_summary_line_all_success():
+def test_render_summary_line_all_success() -> None:
     """Test SUMMARY rendering for all successful files scenario."""
-    start_time = datetime(2023, 1, 1, 10, 0, 0, tzinfo=timezone.utc)
-    end_time = datetime(2023, 1, 1, 10, 0, 2, tzinfo=timezone.utc)  # 2 seconds elapsed
+    start_time = datetime(2023, 1, 1, 10, 0, 0, tzinfo=UTC)
+    end_time = datetime(2023, 1, 1, 10, 0, 2, tzinfo=UTC)  # 2 seconds elapsed
     
     result = ProcessingResult(
         success_files=2,
@@ -54,10 +52,10 @@ def test_render_summary_line_all_success():
     assert match.group(8) == "500"  # throughput_rps (integer formatted without decimal)
 
 
-def test_render_summary_line_partial_failure():
+def test_render_summary_line_partial_failure() -> None:
     """Test SUMMARY rendering for partial failure scenario."""
-    start_time = datetime(2023, 1, 1, 10, 0, 0, tzinfo=timezone.utc)
-    end_time = datetime(2023, 1, 1, 10, 0, 3, tzinfo=timezone.utc)  # 3 seconds elapsed
+    start_time = datetime(2023, 1, 1, 10, 0, 0, tzinfo=UTC)
+    end_time = datetime(2023, 1, 1, 10, 0, 3, tzinfo=UTC)  # 3 seconds elapsed
     
     result = ProcessingResult(
         success_files=1,
@@ -86,10 +84,10 @@ def test_render_summary_line_partial_failure():
     assert match.group(8) == "166.67"  # throughput_rps
 
 
-def test_render_summary_line_zero_files():
+def test_render_summary_line_zero_files() -> None:
     """Test SUMMARY rendering for zero files scenario."""
-    start_time = datetime(2023, 1, 1, 10, 0, 0, tzinfo=timezone.utc)
-    end_time = datetime(2023, 1, 1, 10, 0, 0, tzinfo=timezone.utc)  # 0 seconds elapsed
+    start_time = datetime(2023, 1, 1, 10, 0, 0, tzinfo=UTC)
+    end_time = datetime(2023, 1, 1, 10, 0, 0, tzinfo=UTC)  # 0 seconds elapsed
     
     result = ProcessingResult(
         success_files=0,
@@ -118,10 +116,10 @@ def test_render_summary_line_zero_files():
     assert match.group(8) == "0"  # throughput_rps
 
 
-def test_render_summary_line_decimal_precision():
+def test_render_summary_line_decimal_precision() -> None:
     """Test SUMMARY rendering handles decimal precision correctly."""
-    start_time = datetime(2023, 1, 1, 10, 0, 0, tzinfo=timezone.utc)
-    end_time = datetime(2023, 1, 1, 10, 0, 0, 840000, tzinfo=timezone.utc)  # 0.84 seconds
+    start_time = datetime(2023, 1, 1, 10, 0, 0, tzinfo=UTC)
+    end_time = datetime(2023, 1, 1, 10, 0, 0, 840000, tzinfo=UTC)  # 0.84 seconds
     
     result = ProcessingResult(
         success_files=1,
@@ -141,14 +139,17 @@ def test_render_summary_line_decimal_precision():
     assert match, f"SUMMARY line should match regex: {summary_line}"
     
     # This should produce the exact line from the contract example
-    expected = "SUMMARY files=1/1 success=1 failed=0 rows=4 skipped_sheets=0 elapsed_sec=0.84 throughput_rps=4761.9"
+    expected = (
+        "SUMMARY files=1/1 success=1 failed=0 rows=4 skipped_sheets=0 "
+        "elapsed_sec=0.84 throughput_rps=4761.9"
+    )
     assert summary_line == expected
 
 
-def test_render_summary_line_integer_elapsed_time():
+def test_render_summary_line_integer_elapsed_time() -> None:
     """Test SUMMARY rendering with integer elapsed time (no decimal point)."""
-    start_time = datetime(2023, 1, 1, 10, 0, 0, tzinfo=timezone.utc)
-    end_time = datetime(2023, 1, 1, 10, 0, 5, tzinfo=timezone.utc)  # 5 seconds elapsed
+    start_time = datetime(2023, 1, 1, 10, 0, 0, tzinfo=UTC)
+    end_time = datetime(2023, 1, 1, 10, 0, 5, tzinfo=UTC)  # 5 seconds elapsed
     
     result = ProcessingResult(
         success_files=1,
@@ -172,10 +173,10 @@ def test_render_summary_line_integer_elapsed_time():
     assert "throughput_rps=200" in summary_line  # No trailing space since it's at end of line
 
 
-def test_render_summary_line_formats_numbers_correctly():
+def test_render_summary_line_formats_numbers_correctly() -> None:
     """Test that numeric formatting meets contract requirements."""
-    start_time = datetime(2023, 1, 1, 10, 0, 0, tzinfo=timezone.utc)
-    end_time = datetime(2023, 1, 1, 10, 0, 1, 500000, tzinfo=timezone.utc)  # 1.5 seconds
+    start_time = datetime(2023, 1, 1, 10, 0, 0, tzinfo=UTC)
+    end_time = datetime(2023, 1, 1, 10, 0, 1, 500000, tzinfo=UTC)  # 1.5 seconds
     
     result = ProcessingResult(
         success_files=2,
@@ -202,10 +203,10 @@ def test_render_summary_line_formats_numbers_correctly():
     assert "skipped_sheets=2" in summary_line
 
 
-def test_render_summary_line_handles_very_small_elapsed_time():
+def test_render_summary_line_handles_very_small_elapsed_time() -> None:
     """Test SUMMARY rendering handles very small elapsed times without scientific notation."""
-    start_time = datetime(2023, 1, 1, 10, 0, 0, tzinfo=timezone.utc)
-    end_time = datetime(2023, 1, 1, 10, 0, 0, 50, tzinfo=timezone.utc)  # 50 microseconds
+    start_time = datetime(2023, 1, 1, 10, 0, 0, tzinfo=UTC)
+    end_time = datetime(2023, 1, 1, 10, 0, 0, 50, tzinfo=UTC)  # 50 microseconds
     
     result = ProcessingResult(
         success_files=0,

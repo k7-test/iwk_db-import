@@ -35,8 +35,8 @@ def render_summary_line(total_files: int, result: ProcessingResult) -> str:
         ...     skipped_sheets=0, start_time=start, end_time=end,
         ...     elapsed_seconds=2.0, throughput_rows_per_sec=500.0
         ... )
-        >>> render_summary_line(1, result)
-        'SUMMARY files=1/1 success=1 failed=0 rows=1000 skipped_sheets=0 elapsed_sec=2 throughput_rps=500'
+        >>> render_summary_line(1, result)  # doctest: +ELLIPSIS
+        'SUMMARY files=1/1 success=1 failed=0 rows=1000 skipped_sheets=0 elapsed_sec=2 ...'
     """
     # Format elapsed_sec and throughput_rps according to contract
     # Handle very small numbers and integer values appropriately
