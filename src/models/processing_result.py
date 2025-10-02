@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import statistics
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -10,6 +11,7 @@ based on data-model.md specifications.
 
 Phase: 3.3 (Domain Models)
 Task: T019 - Implement ProcessingResult, FileStat, MetricsSnapshot
+Task: T029 - Add batch timing statistics accumulation
 """
 
 
@@ -18,11 +20,16 @@ class FileStat:
     """Per-file processing statistics (internal helper for ProcessingResult).
     
     Used to track detailed metrics for each individual file processed.
+    Includes batch-level timing statistics for performance analysis (T029).
     """
     file_name: str  # ファイル名
     status: str  # success/failed
     inserted_rows: int  # 成功時行数
     elapsed_seconds: float  # ファイル処理時間
+    # T029: Batch timing statistics
+    total_batches: int = 0  # 総バッチ数
+    avg_batch_seconds: float = 0.0  # 平均バッチ時間
+    p95_batch_seconds: float = 0.0  # p95 バッチ時間 (performance monitoring)
 
 
 @dataclass(frozen=True)
@@ -54,3 +61,43 @@ class MetricsSnapshot:
     current_sheet: str  # 現在処理シート
     processed_rows_in_file: int  # 現ファイルで処理済行数
     last_update: datetime  # 最終表示更新時刻
+
+
+class BatchStatsAccumulator:
+    """Helper class to accumulate batch timing statistics for FileStat (T029).
+    
+    Collects individual batch timing data and calculates summary statistics.
+    """
+    
+    def __init__(self) -> None:
+        self.batch_times: list[float] = []
+    
+    def add_batch_time(self, elapsed_seconds: float) -> None:
+        """Add a batch timing measurement."""
+        self.batch_times.append(elapsed_seconds)
+    
+    def get_stats(self) -> tuple[int, float, float]:
+        """Calculate batch statistics.
+        
+        Returns:
+            tuple: (total_batches, avg_batch_seconds, p95_batch_seconds)
+        """
+        if not self.batch_times:
+            return (0, 0.0, 0.0)
+        
+        total_batches = len(self.batch_times)
+        avg_batch_seconds = statistics.mean(self.batch_times)
+        
+        # Calculate p95 (95th percentile)
+        PERCENTILE = 0.95
+        QUANTILES = 20
+        if total_batches == 1:
+            p95_batch_seconds = self.batch_times[0]
+        else:
+            # Use quantiles for p95 calculation
+            quantile_index = int(PERCENTILE * QUANTILES) - 1  # 95th percentile index for 20 quantiles
+            p95_batch_seconds = statistics.quantiles(
+                self.batch_times, n=QUANTILES, method='inclusive'
+            )[quantile_index]
+        
+        return (total_batches, avg_batch_seconds, p95_batch_seconds)

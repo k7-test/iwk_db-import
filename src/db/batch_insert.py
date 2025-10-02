@@ -64,8 +64,20 @@ def batch_insert(
     rows: 行シーケンス
     returning: True の場合 SELECT RETURNING 句付与 (PK 取得用途)
     page_size: execute_values の page_size (性能調整)
-    metrics_callback: Optional callback to receive BatchMetrics for timing instrumentation (T023).
+    metrics_callback: Optional callback to receive BatchMetrics for timing instrumentation 
+        (T023, T029).
         Note: If `rows` is empty, this callback will not be invoked (the function returns early).
+        
+        Example usage for accumulating batch statistics:
+            from src.models.processing_result import BatchStatsAccumulator
+            
+            accumulator = BatchStatsAccumulator()
+            def callback(metrics):
+                accumulator.add_batch_time(metrics.elapsed_seconds)
+            
+            batch_insert(cursor, table, columns, rows, metrics_callback=callback)
+            total, avg, p95 = accumulator.get_stats()
+            # Use stats in FileStat construction
     """
     if execute_values is None:
         raise BatchInsertError("psycopg2 not available")
