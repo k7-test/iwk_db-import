@@ -22,9 +22,6 @@ except ImportError:  # pragma: no cover
     jsonschema = None  # type: ignore
     ValidationError = Exception  # type: ignore
 
-REQUIRED_ROOT_KEYS = {
-    "source_directory", "sheet_mappings", "sequences", "fk_propagations", "database"
-}
 
 # Get schema path relative to the repository root
 _current_file = Path(__file__)
