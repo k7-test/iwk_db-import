@@ -99,7 +99,7 @@ def mock_execute_values_with_timing(monkeypatch):
 
 
 @pytest.mark.skipif(
-    not os.environ.get("RUN_BATCH_EXPERIMENT", False),
+    os.environ.get("RUN_BATCH_EXPERIMENT") != "1",
     reason="Batch size experiment - developer opt-in only (set RUN_BATCH_EXPERIMENT=1)"
 )
 def test_batch_size_experiment_comprehensive(mock_execute_values_with_timing):
