@@ -55,12 +55,16 @@ class ImportConfig:
 
 def _validate_config_schema(data: dict[str, Any]) -> None:
     """Validate config data against JSON schema.
-    
+
     Args:
         data: Configuration data to validate
-        
+
     Raises:
-        ConfigError: If jsonschema is not available or validation fails
+        ConfigError: If any of the following occurs:
+            - The jsonschema library is not available.
+            - The schema file does not exist.
+            - The schema file is not valid JSON.
+            - The config data fails schema validation (e.g., missing required keys, wrong types, or other schema violations).
     """
     if jsonschema is None:
         raise ConfigError("jsonschema library is required for config validation")
