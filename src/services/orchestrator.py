@@ -12,6 +12,7 @@ from ..models.config_models import SheetMappingConfig as DomainSheetMappingConfi
 from ..models.excel_file import ExcelFile, FileStatus
 from ..models.processing_result import FileStat, ProcessingResult
 from ..models.sheet_process import SheetProcess
+from .progress import ProgressTracker, SheetProgressIndicator
 # TODO: Add FK propagation service import for T023
 # from .fk_propagation import needs_returning, build_fk_propagation_maps, propagate_foreign_keys
 
@@ -143,36 +144,51 @@ def process_all(config: ImportConfig, cursor: Any = None) -> ProcessingResult:
             file_stats=[]
         )
     
-    # Process each file
+    # Process each file with progress tracking
     file_stats: list[FileStat] = []
     success_count = 0
     failed_count = 0
     total_rows = 0
     total_skipped_sheets = 0
     
-    for file_path in file_paths:
-        file_start = datetime.now(UTC)
-        file_result = _process_single_file(file_path, domain_mappings, cursor, error_log)
-        file_end = datetime.now(UTC)
-        file_elapsed = (file_end - file_start).total_seconds()
-        
-        # Update counters
-        if file_result.status == FileStatus.SUCCESS:
-            success_count += 1
-            total_rows += file_result.total_rows
-        else:
-            failed_count += 1
-        
-        total_skipped_sheets += file_result.skipped_sheets
-        
-        # Create file stat
-        file_stat = FileStat(
-            file_name=file_path.name,
-            status=file_result.status.value,
-            inserted_rows=file_result.total_rows,
-            elapsed_seconds=file_elapsed
-        )
-        file_stats.append(file_stat)
+    # Initialize progress tracker for files (T030)
+    with ProgressTracker(len(file_paths), description="Processing files") as progress:
+        for file_path in file_paths:
+            # Start file processing
+            progress.start_file(file_path)
+            
+            file_start = datetime.now(UTC)
+            file_result = _process_single_file(file_path, domain_mappings, cursor, error_log)
+            file_end = datetime.now(UTC)
+            file_elapsed = (file_end - file_start).total_seconds()
+            
+            # Update counters
+            if file_result.status == FileStatus.SUCCESS:
+                success_count += 1
+                total_rows += file_result.total_rows
+            else:
+                failed_count += 1
+            
+            total_skipped_sheets += file_result.skipped_sheets
+            
+            # Update progress postfix with current stats
+            progress.set_postfix(
+                success=success_count,
+                failed=failed_count,
+                rows=total_rows
+            )
+            
+            # Finish file processing
+            progress.finish_file(success=(file_result.status == FileStatus.SUCCESS))
+            
+            # Create file stat
+            file_stat = FileStat(
+                file_name=file_path.name,
+                status=file_result.status.value,
+                inserted_rows=file_result.total_rows,
+                elapsed_seconds=file_elapsed
+            )
+            file_stats.append(file_stat)
     
     # Flush error log once (R-005)
     try:
@@ -264,6 +280,15 @@ def _process_single_file(
         skipped_sheets = 0
         sheet_processes: list[SheetProcess] = []
         
+        # Count sheets that have mappings for progress tracking
+        mapped_sheets = [name for name in raw_sheets.keys() if name in sheet_mappings]
+        
+        # Initialize sheet progress indicator (T030)
+        sheet_progress = SheetProgressIndicator(
+            file_name=file_path.name, 
+            total_sheets=len(mapped_sheets)
+        )
+        
         # Process each sheet that has a mapping
         for sheet_name, df in raw_sheets.items():
             if sheet_name not in sheet_mappings:
@@ -271,11 +296,21 @@ def _process_single_file(
                 continue
             
             sheet_mapping = sheet_mappings[sheet_name]
+            
+            # Start sheet processing
+            sheet_progress.start_sheet(sheet_name)
+            
             sheet_result = _process_single_sheet(
                 sheet_name, df, sheet_mapping, cursor, error_log, file_path.name
             )
             sheet_processes.append(sheet_result)
             total_inserted_rows += sheet_result.inserted_rows
+            
+            # Finish sheet processing
+            sheet_progress.finish_sheet(
+                success=(sheet_result.error is None),
+                rows_processed=sheet_result.inserted_rows
+            )
         
         
         
