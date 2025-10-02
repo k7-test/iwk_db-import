@@ -1,14 +1,13 @@
 from __future__ import annotations
+
 import logging
-import sys
 from io import StringIO
-from pathlib import Path
 from unittest.mock import patch
 
 import pytest
 
-from src.logging.init import setup_logging, get_logger
 from src.logging.error_log import ErrorLogBuffer
+from src.logging.init import get_logger, setup_logging
 from src.models.error_record import ErrorRecord
 
 
@@ -29,8 +28,6 @@ def test_setup_logging_creates_logger_with_labeled_formatter():
 
 def test_logging_labeled_prefixes():
     """Test that logging outputs have correct labeled prefixes (INFO|WARN|ERROR|SUMMARY)."""
-    from io import StringIO
-    import sys
     import logging
     
     # Reset global logger to ensure clean state
@@ -137,13 +134,16 @@ def test_summary_level_logging():
     
     # Test logging at SUMMARY level
     with patch.object(logger, '_log') as mock_log:
-        logger.log(25, "files=1/1 success=1 failed=0 rows=100 skipped_sheets=0 elapsed_sec=1.5 throughput_rps=66.7")
+        test_summary = (
+            "files=1/1 success=1 failed=0 rows=100 skipped_sheets=0 "
+            "elapsed_sec=1.5 throughput_rps=66.7"
+        )
+        logger.log(25, test_summary)
         mock_log.assert_called_once()
 
 
 def test_log_summary_convenience_function():
     """Test the log_summary convenience function."""
-    from io import StringIO
     import logging
     
     # Reset global logger
@@ -177,14 +177,20 @@ def test_log_summary_convenience_function():
     src.logging.init._logger = logger
     
     # Test log_summary function
-    log_summary("files=2/2 success=2 failed=0 rows=150 skipped_sheets=0 elapsed_sec=2.5 throughput_rps=60.0")
+    log_summary(
+        "files=2/2 success=2 failed=0 rows=150 skipped_sheets=0 elapsed_sec=2.5 throughput_rps=60.0"
+    )
     
     # Get captured output
     output = captured_output.getvalue()
     lines = output.strip().split('\n')
     
     assert len(lines) == 1
-    assert lines[0] == "SUMMARY files=2/2 success=2 failed=0 rows=150 skipped_sheets=0 elapsed_sec=2.5 throughput_rps=60.0"
+    expected_line = (
+        "SUMMARY files=2/2 success=2 failed=0 rows=150 skipped_sheets=0 "
+        "elapsed_sec=2.5 throughput_rps=60.0"
+    )
+    assert lines[0] == expected_line
 
 
 @pytest.fixture
