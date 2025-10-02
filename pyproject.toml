@@ -32,6 +32,9 @@ dev = [
 [tool.pytest.ini_options]
 addopts = "-q --cov=src --cov-report=term-missing --cov-fail-under=90"
 python_files = "test_*.py"
+markers = [
+    "smoke: marks tests as smoke tests (fast subset for CI)",
+]
 
 [tool.ruff]
 line-length = 100
