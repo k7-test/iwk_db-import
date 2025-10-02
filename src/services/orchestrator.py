@@ -41,6 +41,10 @@ def _convert_config_to_domain_mappings(config: ImportConfig) -> dict[str, Domain
     domain_mappings: dict[str, DomainSheetMappingConfig] = {}
     
     for sheet_name, mapping_data in config.sheet_mappings.items():
+        if not isinstance(mapping_data, dict):
+            raise ProcessingError(
+                f"Invalid mapping data for sheet '{sheet_name}': expected a dict, got {type(mapping_data).__name__}"
+            )
         # Extract table name from mapping data
         table_name = mapping_data.get("table", sheet_name.lower())
         
