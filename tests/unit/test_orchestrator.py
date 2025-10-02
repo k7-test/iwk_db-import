@@ -142,6 +142,81 @@ def test_process_all_partial_failure(temp_workdir: Path, write_config: Path) -> 
     assert "failed" in statuses
 
 
+def test_process_all_with_database_transaction_rollback(temp_workdir: Path, write_config: Path) -> None:
+    """Test T021: Database transaction rollback on file-level failure."""
+    config = load_config(write_config)
+    data_dir = temp_workdir / "data"
+    
+    # Create test Excel files
+    (data_dir / "success.xlsx").write_bytes(b"test")
+    (data_dir / "failure.xlsx").write_bytes(b"test")
+    
+    # Mock database cursor
+    mock_cursor = MagicMock()
+    
+    mock_sheet_data = MagicMock()
+    mock_sheet_data.columns = ["id", "name"]
+    mock_sheet_data.rows = [{"id": 1, "name": "Test"}]
+    
+    # Mock batch_insert to return successful results
+    mock_insert_result = MagicMock()
+    mock_insert_result.inserted_rows = 1
+    
+    def mock_read_side_effect(path, target_sheets=None):
+        if "failure" in str(path):
+            raise Exception("Simulated file processing failure")
+        return {"Customers": MagicMock()}
+    
+    with patch('src.services.orchestrator.read_excel_file') as mock_read:
+        with patch('src.services.orchestrator.normalize_sheet') as mock_normalize:
+            with patch('src.services.orchestrator.batch_insert') as mock_batch_insert:
+                mock_read.side_effect = mock_read_side_effect
+                mock_normalize.return_value = mock_sheet_data
+                mock_batch_insert.return_value = mock_insert_result
+                
+                result = process_all(config, cursor=mock_cursor)
+    
+    # Verify transaction management calls
+    execute_calls = mock_cursor.execute.call_args_list
+    
+    # Should have: BEGIN (success file), COMMIT (success file), BEGIN (failure file), ROLLBACK (failure file)
+    begin_calls = [call for call in execute_calls if call[0][0] == "BEGIN"]
+    commit_calls = [call for call in execute_calls if call[0][0] == "COMMIT"]
+    rollback_calls = [call for call in execute_calls if call[0][0] == "ROLLBACK"]
+    
+    assert len(begin_calls) == 2  # One for each file
+    assert len(commit_calls) == 1  # Only for successful file
+    assert len(rollback_calls) == 1  # Only for failed file
+    
+    # Verify processing results
+    assert result.success_files == 1
+    assert result.failed_files == 1
+    assert result.total_inserted_rows == 1  # Only from successful file
+
+
+def test_process_all_transaction_begin_failure(temp_workdir: Path, write_config: Path) -> None:
+    """Test T021: Handle failure to begin transaction."""
+    config = load_config(write_config)
+    data_dir = temp_workdir / "data"
+    
+    # Create test Excel file
+    (data_dir / "test.xlsx").write_bytes(b"test")
+    
+    # Mock database cursor that fails on BEGIN
+    mock_cursor = MagicMock()
+    mock_cursor.execute.side_effect = Exception("Cannot begin transaction")
+    
+    result = process_all(config, cursor=mock_cursor)
+    
+    # Should fail gracefully and record error
+    assert result.success_files == 0
+    assert result.failed_files == 1
+    assert result.total_inserted_rows == 0
+    
+    # Verify BEGIN was attempted
+    mock_cursor.execute.assert_called_with("BEGIN")
+
+
 def test_process_all_config_conversion_error(temp_workdir: Path) -> None:
     """Test error handling during config conversion."""
     # Create config with invalid sheet mappings structure 
