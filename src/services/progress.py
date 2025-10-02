@@ -24,6 +24,7 @@ The progress display shows:
 __all__ = [
     "ProgressTracker",
     "is_tty_enabled",
+    "SheetProgressIndicator",
 ]
 
 
