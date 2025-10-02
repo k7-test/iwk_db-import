@@ -40,6 +40,15 @@ Run tests:
 pytest
 ```
 
+Run performance tests (developer opt-in):
+```
+# Run batch size experiment (T013)
+RUN_BATCH_EXPERIMENT=1 pytest tests/perf/test_batch_size_experiment.py -v -s
+
+# Run all performance tests
+pytest tests/perf/ -v
+```
+
 ## Contracts
 - Exit codes: `contracts/cli_exit_codes.md`
 - SUMMARY regex: `contracts/summary_output.md`
