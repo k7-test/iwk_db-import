@@ -170,7 +170,7 @@ def test_throughput_budget_smoke():
     df = generate_synthetic_dataframe(rows=5_000, cols=10)
     
     columns = df.columns.tolist()
-    rows_data = [row.tolist() for _, row in df.iterrows()]
+    rows_data = df.values.tolist()
     
     cursor = MockCursor()
     
