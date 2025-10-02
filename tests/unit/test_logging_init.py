@@ -32,7 +32,7 @@ def test_logging_labeled_prefixes():
     
     # Reset global logger to ensure clean state
     import src.logging.init
-    src.logging.init._logger = None
+    src.logging.init.reset_logging()
     
     # Create a StringIO to capture output
     captured_output = StringIO()
@@ -191,20 +191,3 @@ def test_log_summary_convenience_function():
         "elapsed_sec=2.5 throughput_rps=60.0"
     )
     assert lines[0] == expected_line
-
-
-@pytest.fixture
-def reset_logging():
-    """Reset logging configuration between tests."""
-    # Store original loggers
-    original_loggers = logging.Logger.manager.loggerDict.copy()
-    
-    yield
-    
-    # Reset logging configuration
-    logging.Logger.manager.loggerDict.clear()
-    logging.Logger.manager.loggerDict.update(original_loggers)
-    
-    # Clear handlers from root logger
-    for handler in logging.root.handlers[:]:
-        logging.root.removeHandler(handler)

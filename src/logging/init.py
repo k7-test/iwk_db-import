@@ -19,6 +19,8 @@ Integration with error log buffer from src.logging.error_log module.
 __all__ = [
     "setup_logging", 
     "get_logger",
+    "log_summary",
+    "reset_logging",
 ]
 
 # Custom SUMMARY level (between INFO=20 and WARNING=30)
