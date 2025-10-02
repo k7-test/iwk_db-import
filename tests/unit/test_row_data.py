@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+
 from src.models.row_data import RowData
 
 
