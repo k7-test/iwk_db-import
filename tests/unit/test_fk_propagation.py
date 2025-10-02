@@ -14,7 +14,7 @@ from src.services.fk_propagation import (
     propagate_foreign_keys,
 )
 
-"""Unit tests for FK propagation service (T032).
+"""Unit tests for FK propagation service (T022).
 
 Tests the FK propagation logic including:
 - Conditional RETURNING determination (R-007)
