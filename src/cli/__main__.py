@@ -4,6 +4,7 @@ import sys
 from pathlib import Path
 
 from src.config.loader import ConfigError, load_config
+from src.services.orchestrator import process_all, ProcessingError
 
 """CLI entrypoint (scaffold).
 
@@ -21,9 +22,6 @@ EXIT_PARTIAL_FAILURE = 2
 EXIT_FATAL = 1
 
 
-def _scan_excel_files(directory: Path) -> list[Path]:
-    return [p for p in directory.iterdir() if p.is_file() and p.suffix == ".xlsx"]
-
 
 def main(argv: list[str] | None = None) -> int:
     argv = argv or sys.argv[1:]
@@ -39,39 +37,31 @@ def main(argv: list[str] | None = None) -> int:
         print(f"ERROR directory not found: {directory}")
         return EXIT_FATAL
 
-    files = _scan_excel_files(directory)
-    if not files:
-        # 0件でも成功 (FR-025) → SUMMARY 行簡易出力
-        print("SUMMARY files=0/0 success=0 failed=0 rows=0 skipped_sheets=0 "
-              "elapsed_sec=0 throughput_rps=0")
-        return EXIT_SUCCESS_ALL
-
-    # 仮実装: ファイル名で成功/失敗をシミュレート (scaffolding)
-    # "failure" を含むファイル名は失敗とみなす
-    total = len(files)
-    failed_files = [f for f in files if "failure" in f.name.lower()]
-    success_files = [f for f in files if "failure" not in f.name.lower()]
+    # Process all files using orchestrator
+    try:
+        result = process_all(cfg, cursor=None)  # Mock mode for now
+    except ProcessingError as e:
+        print(f"ERROR processing: {e}")
+        return EXIT_FATAL
     
-    failed_count = len(failed_files)
-    success_count = len(success_files)
+    # Calculate total files processed
+    total_files = result.success_files + result.failed_files
     
-    if failed_count > 0 and success_count > 0:
-        # 部分失敗: 少なくとも1つ失敗、少なくとも1つ成功
-        print(f"SUMMARY files={total}/{total} success={success_count} "
-              f"failed={failed_count} rows=0 skipped_sheets=0 elapsed_sec=0 "
-              f"throughput_rps=0")
+    # Format and print SUMMARY line according to contract
+    print(f"SUMMARY files={total_files}/{total_files} success={result.success_files} "
+          f"failed={result.failed_files} rows={result.total_inserted_rows} "
+          f"skipped_sheets={result.skipped_sheets} elapsed_sec={result.elapsed_seconds:.1f} "
+          f"throughput_rps={result.throughput_rows_per_sec:.1f}")
+    
+    # Determine exit code
+    if result.failed_files > 0 and result.success_files > 0:
+        # Partial failure: some files succeeded, some failed
         return EXIT_PARTIAL_FAILURE
-    elif failed_count > 0:
-        # 全て失敗 (将来的には exit code 2 だが、今は部分失敗として扱う)
-        print(f"SUMMARY files={total}/{total} success={success_count} "
-              f"failed={failed_count} rows=0 skipped_sheets=0 elapsed_sec=0 "
-              f"throughput_rps=0")
+    elif result.failed_files > 0:
+        # All files failed (if any files existed)
         return EXIT_PARTIAL_FAILURE
     else:
-        # 全て成功
-        print(f"SUMMARY files={total}/{total} success={success_count} "
-              f"failed={failed_count} rows=0 skipped_sheets=0 elapsed_sec=0 "
-              f"throughput_rps=0")
+        # All files succeeded (or no files found)
         return EXIT_SUCCESS_ALL
 
 if __name__ == "__main__":  # pragma: no cover
