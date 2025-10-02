@@ -1,16 +1,16 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 from ..config.loader import ImportConfig
-from ..models.config_models import SheetMappingConfig as DomainSheetMappingConfig
-from ..excel.reader import read_excel_file, normalize_sheet, SheetHeaderError, MissingColumnsError
-from ..db.batch_insert import batch_insert, BatchInsertError
+from ..db.batch_insert import BatchInsertError, batch_insert
+from ..excel.reader import MissingColumnsError, SheetHeaderError, normalize_sheet, read_excel_file
 from ..logging.error_log import ErrorLogBuffer, ErrorRecord
+from ..models.config_models import SheetMappingConfig as DomainSheetMappingConfig
 from ..models.excel_file import ExcelFile, FileStatus
-from ..models.processing_result import ProcessingResult, FileStat
+from ..models.processing_result import FileStat, ProcessingResult
 from ..models.sheet_process import SheetProcess
 
 """Service orchestration for Excel -> PostgreSQL import tool.
@@ -103,7 +103,7 @@ def process_all(config: ImportConfig, cursor: Any = None) -> ProcessingResult:
     Raises:
         ProcessingError: For fatal errors that prevent processing
     """
-    start_time = datetime.now(timezone.utc)
+    start_time = datetime.now(UTC)
     error_log = ErrorLogBuffer()
     
     # Convert config to domain models
@@ -122,7 +122,7 @@ def process_all(config: ImportConfig, cursor: Any = None) -> ProcessingResult:
     
     # Handle empty directory case (FR-025)
     if not file_paths:
-        end_time = datetime.now(timezone.utc)
+        end_time = datetime.now(UTC)
         elapsed = (end_time - start_time).total_seconds()
         return ProcessingResult(
             success_files=0,
@@ -144,9 +144,9 @@ def process_all(config: ImportConfig, cursor: Any = None) -> ProcessingResult:
     total_skipped_sheets = 0
     
     for file_path in file_paths:
-        file_start = datetime.now(timezone.utc)
+        file_start = datetime.now(UTC)
         file_result = _process_single_file(file_path, domain_mappings, cursor, error_log)
-        file_end = datetime.now(timezone.utc)
+        file_end = datetime.now(UTC)
         file_elapsed = (file_end - file_start).total_seconds()
         
         # Update counters
@@ -175,7 +175,7 @@ def process_all(config: ImportConfig, cursor: Any = None) -> ProcessingResult:
         pass
     
     # Calculate final metrics
-    end_time = datetime.now(timezone.utc)
+    end_time = datetime.now(UTC)
     elapsed_seconds = (end_time - start_time).total_seconds()
     
     # Calculate throughput (avoid division by zero)
@@ -214,14 +214,7 @@ def _process_single_file(
     Returns:
         ExcelFile with processing results and status
     """
-    start_time = datetime.now(timezone.utc)
-    excel_file = ExcelFile(
-        path=file_path,
-        name=file_path.name,
-        sheets=[],
-        start_time=start_time,
-        status=FileStatus.PROCESSING
-    )
+    start_time = datetime.now(UTC)
     
     try:
         # Read Excel file
@@ -249,7 +242,7 @@ def _process_single_file(
         mapped_sheet_names = set(sheet_mappings.keys())
         skipped_sheets += len(all_sheet_names - mapped_sheet_names)
         
-        end_time = datetime.now(timezone.utc)
+        end_time = datetime.now(UTC)
         
         # Return successful result
         return ExcelFile(
@@ -275,7 +268,7 @@ def _process_single_file(
         )
         error_log.append(error_record)
         
-        end_time = datetime.now(timezone.utc)
+        end_time = datetime.now(UTC)
         
         # Return failed result
         return ExcelFile(
@@ -323,7 +316,9 @@ def _process_single_sheet(
                 table_name=sheet_mapping.table_name,
                 mapping=sheet_mapping,
                 rows=None,
-                ignored_columns=sheet_mapping.sequence_columns | sheet_mapping.fk_propagation_columns,
+                ignored_columns=(
+                    sheet_mapping.sequence_columns | sheet_mapping.fk_propagation_columns
+                ),
                 inserted_rows=0,
                 error=None
             )
