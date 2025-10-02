@@ -64,7 +64,8 @@ def batch_insert(
     rows: 行シーケンス
     returning: True の場合 SELECT RETURNING 句付与 (PK 取得用途)
     page_size: execute_values の page_size (性能調整)
-    metrics_callback: Optional callback to receive BatchMetrics for timing instrumentation (T023)
+    metrics_callback: Optional callback to receive BatchMetrics for timing instrumentation (T023).
+        Note: If `rows` is empty, this callback will not be invoked (the function returns early).
     """
     if execute_values is None:
         raise BatchInsertError("psycopg2 not available")
