@@ -6,6 +6,7 @@ from pathlib import Path as _P
 from unittest.mock import patch, MagicMock
 
 from src.cli import main as cli_main
+from src.logging.init import reset_logging
 
 """Exit code contract tests (incrementally enabled)."""
 
@@ -15,6 +16,8 @@ PROJECT_ROOT = _P(__file__).resolve().parents[2]  # /workspaces/iwk_db-import
 def test_exit_code_fatal_startup(temp_workdir: Path, capsys):
     # config/import.yml 無し → exit 1
     import os
+    reset_logging()  # Ensure clean logging state
+    
     cwd_before = os.getcwd()
     try:
         os.chdir(temp_workdir)
@@ -28,6 +31,7 @@ def test_exit_code_fatal_startup(temp_workdir: Path, capsys):
 
 def test_exit_code_all_success(temp_workdir: Path, write_config, dummy_excel_files, capsys):
     import os
+    reset_logging()  # Ensure clean logging state
     
     # Mock Excel processing to simulate successful processing
     mock_sheet_data = MagicMock()
@@ -61,6 +65,7 @@ def test_exit_code_all_success(temp_workdir: Path, write_config, dummy_excel_fil
 def test_exit_code_partial_failure(temp_workdir: Path, write_config, capsys):
     """Test exit code 2 when some files fail but others succeed."""
     import os
+    reset_logging()  # Ensure clean logging state
     
     # Create two Excel files - one will be simulated as failing  
     data_dir = temp_workdir / "data"
