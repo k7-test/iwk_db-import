@@ -27,3 +27,8 @@ ENV/
 # ---- OS / Misc ----
 .DS_Store
 logs/
+
+# ---- Generated performance datasets ----
+# Avoid accidentally committing large datasets
+perf_dataset*.xlsx
+*_perf_*.xlsx
