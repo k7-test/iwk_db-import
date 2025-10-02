@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 """Config loader skeleton (Phase 1) - Failing tests will drive implementation.
 
 Responsibilities:
@@ -7,12 +8,31 @@ Responsibilities:
 - Apply defaults (timezone=UTC if missing)
 - DO NOT implement full logic yet.
 """
+import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+
 import yaml
 
-REQUIRED_ROOT_KEYS = {"source_directory", "sheet_mappings", "sequences", "fk_propagations", "database"}
+try:
+    import jsonschema  # type: ignore
+    from jsonschema.exceptions import ValidationError  # type: ignore
+except ImportError:  # pragma: no cover
+    jsonschema = None  # type: ignore
+    ValidationError = Exception  # type: ignore
+
+REQUIRED_ROOT_KEYS = {
+    "source_directory", "sheet_mappings", "sequences", "fk_propagations", "database"
+}
+
+# Get schema path relative to the repository root
+_current_file = Path(__file__)
+# src/config/loader.py -> src/config -> src -> repo_root
+_repo_root = _current_file.parent.parent.parent
+SCHEMA_PATH = (
+    _repo_root / "specs" / "001-excel-postgressql-excel" / "contracts" / "config_schema.json"
+)
 
 class ConfigError(Exception):
     pass
@@ -36,6 +56,30 @@ class ImportConfig:
     database: DatabaseConfig
 
 
+def _validate_config_schema(data: dict[str, Any]) -> None:
+    """Validate config data against JSON schema.
+    
+    Args:
+        data: Configuration data to validate
+        
+    Raises:
+        ConfigError: If jsonschema is not available or validation fails
+    """
+    if jsonschema is None:
+        raise ConfigError("jsonschema library is required for config validation")
+    
+    if not SCHEMA_PATH.exists():
+        raise ConfigError(f"config schema not found: {SCHEMA_PATH}")
+    
+    try:
+        schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
+        jsonschema.validate(data, schema)  # type: ignore
+    except json.JSONDecodeError as e:
+        raise ConfigError(f"invalid schema file: {e}") from e
+    except ValidationError as e:
+        raise ConfigError(f"config validation failed: {e.message}") from e
+
+
 def load_config(path: Path) -> ImportConfig:
     if not path.exists():  # FR-015
         raise ConfigError(f"config file not found: {path}")
@@ -44,9 +88,8 @@ def load_config(path: Path) -> ImportConfig:
     except yaml.YAMLError as e:
         raise ConfigError(f"invalid yaml: {e}") from e
 
-    missing = REQUIRED_ROOT_KEYS - data.keys()
-    if missing:  # FR-026
-        raise ConfigError(f"missing required keys: {sorted(missing)}")
+    # Validate against JSON schema
+    _validate_config_schema(data)
 
     tz = data.get("timezone", "UTC")  # FR-023 default
     db_raw = data.get("database", {})
