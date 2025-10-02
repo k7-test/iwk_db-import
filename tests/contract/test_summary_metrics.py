@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from src.cli import main as cli_main
+from src.logging.init import reset_logging
 
 """Contract test: summary metrics populated (T006).
 
@@ -105,11 +106,13 @@ def test_cli_success_populates_metrics(
 def test_cli_zero_files_zero_throughput(temp_workdir: Path, write_config, capsys):
     """Test Case 3: rows=0 (Excel 0 files) → throughput_rps=0."""
     import os
+    reset_logging()  # Ensure clean logging state
+    
     # Remove any excel files to ensure 0 files scenario
     data_dir = temp_workdir / 'data'
     for f in data_dir.glob('*.xlsx'):
         f.unlink()
-    
+
     cwd_before = os.getcwd()
     try:
         os.chdir(temp_workdir)
