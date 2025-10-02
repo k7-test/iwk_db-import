@@ -50,6 +50,7 @@ class SheetMappingConfig:
         # In the initial implementation, we don't have a full column list
         # This property will be more meaningful when we have complete table schema info
         # For now, it returns an empty set as a placeholder
+        # TODO(T015): Implement expected_columns logic when table schema is available
         return set()
 
 
