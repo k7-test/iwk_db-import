@@ -43,7 +43,8 @@ def _convert_config_to_domain_mappings(config: ImportConfig) -> dict[str, Domain
     for sheet_name, mapping_data in config.sheet_mappings.items():
         if not isinstance(mapping_data, dict):
             raise ProcessingError(
-                f"Invalid mapping data for sheet '{sheet_name}': expected a dict, got {type(mapping_data).__name__}"
+                f"Invalid mapping data for sheet '{sheet_name}': expected a dict, "
+                f"got {type(mapping_data).__name__}"
             )
         # Extract table name from mapping data
         table_name = mapping_data.get("table", sheet_name.lower())
@@ -209,6 +210,11 @@ def _process_single_file(
 ) -> ExcelFile:
     """Process a single Excel file with transaction boundary.
     
+    T021: Implements per-file transaction with rollback on failure.
+    Each file is processed in its own transaction - on success, changes
+    are committed; on failure, changes are rolled back and processing
+    continues with the next file.
+    
     Args:
         file_path: Path to Excel file to process
         sheet_mappings: Sheet mapping configurations
@@ -219,6 +225,34 @@ def _process_single_file(
         ExcelFile with processing results and status
     """
     start_time = datetime.now(UTC)
+    
+    # Begin transaction for this file (if real DB connection)
+    if cursor is not None:
+        try:
+            cursor.execute("BEGIN")
+        except Exception as e:
+            # If we can't even begin a transaction, record error and fail
+            error_record = ErrorRecord.create(
+                file=file_path.name,
+                sheet="<FILE_LEVEL>",
+                row=-1,
+                error_type="TRANSACTION_BEGIN_ERROR",
+                db_message=str(e)
+            )
+            error_log.append(error_record)
+            
+            end_time = datetime.now(UTC)
+            return ExcelFile(
+                path=file_path,
+                name=file_path.name,
+                sheets=[],
+                start_time=start_time,
+                end_time=end_time,
+                status=FileStatus.FAILED,
+                total_rows=0,
+                skipped_sheets=0,
+                error=f"Failed to begin transaction: {e}"
+            )
     
     try:
         # Read Excel file
@@ -241,9 +275,11 @@ def _process_single_file(
             sheet_processes.append(sheet_result)
             total_inserted_rows += sheet_result.inserted_rows
         
-        # Count skipped sheets (sheets in file but not in mappings)
-        all_sheet_names = set(raw_sheets.keys())
-        mapped_sheet_names = set(sheet_mappings.keys())
+        
+        
+        # Commit transaction on success (if real DB connection)
+        if cursor is not None:
+            cursor.execute("COMMIT")
         
         end_time = datetime.now(UTC)
         
@@ -261,6 +297,21 @@ def _process_single_file(
         )
         
     except Exception as e:
+        # Rollback transaction on any failure (if real DB connection)
+        if cursor is not None:
+            try:
+                cursor.execute("ROLLBACK")
+            except Exception as rollback_e:
+                # Log rollback failure but don't override original error
+                rollback_error = ErrorRecord.create(
+                    file=file_path.name,
+                    sheet="<FILE_LEVEL>",
+                    row=-1,
+                    error_type="TRANSACTION_ROLLBACK_ERROR",
+                    db_message=str(rollback_e)
+                )
+                error_log.append(rollback_error)
+        
         # Log file-level error
         error_record = ErrorRecord.create(
             file=file_path.name,
