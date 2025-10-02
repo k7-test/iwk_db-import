@@ -240,7 +240,6 @@ def _process_single_file(
         # Count skipped sheets (sheets in file but not in mappings)
         all_sheet_names = set(raw_sheets.keys())
         mapped_sheet_names = set(sheet_mappings.keys())
-        skipped_sheets += len(all_sheet_names - mapped_sheet_names)
         
         end_time = datetime.now(UTC)
         
