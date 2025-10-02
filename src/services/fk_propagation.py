@@ -103,8 +103,18 @@ def build_fk_propagation_maps(config: ImportConfig) -> list[FKPropagationMap]:
         parent_table, parent_identifier = parent_parts
         child_table, child_fk_column = child_parts
         
-        # For now, assume PK column is always 'id' - this could be configurable later
-        parent_pk_column = "id"
+        # Determine PK column name from config.sequences or config.pk_columns if available
+        parent_pk_column = None
+        # Try config.sequences: {table_name: {"column": pk_column, ...}, ...}
+        if hasattr(config, "sequences") and parent_table in config.sequences:
+            seq_info = config.sequences[parent_table]
+            parent_pk_column = seq_info.get("column", None)
+        # Or try config.pk_columns: {table_name: pk_column, ...}
+        elif hasattr(config, "pk_columns") and parent_table in config.pk_columns:
+            parent_pk_column = config.pk_columns[parent_table]
+        # Fallback to 'id' if not found
+        if parent_pk_column is None:
+            parent_pk_column = "id"
         
         maps.append(FKPropagationMap(
             parent_table=parent_table,
