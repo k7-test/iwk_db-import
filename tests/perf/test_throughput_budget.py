@@ -113,9 +113,7 @@ def test_throughput_budget_50k_rows(mock_execute_values):
     
     # Convert DataFrame to rows format expected by batch_insert
     columns = df.columns.tolist()
-    rows_data = []
-    for _, row in df.iterrows():
-        rows_data.append(row.tolist())
+    rows_data = df.values.tolist()
     
     # Setup mock cursor
     cursor = MockCursor()
