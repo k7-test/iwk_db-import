@@ -6,6 +6,7 @@ from pathlib import Path
 from src.config.loader import ConfigError, load_config
 from src.logging.init import log_summary, setup_logging
 from src.services.orchestrator import ProcessingError, process_all
+from src.services.summary import render_summary_line
 
 """CLI entrypoint (scaffold).
 
@@ -54,14 +55,11 @@ def main(argv: list[str] | None = None) -> int:
     # Calculate total files processed
     total_files = result.success_files + result.failed_files
     
-    # Format and print SUMMARY line according to contract using log_summary
-    summary_msg = (
-        f"files={total_files}/{total_files} success={result.success_files} "
-        f"failed={result.failed_files} rows={result.total_inserted_rows} "
-        f"skipped_sheets={result.skipped_sheets} elapsed_sec={result.elapsed_seconds:.1f} "
-        f"throughput_rps={result.throughput_rows_per_sec:.1f}"
-    )
-    log_summary(summary_msg)
+    # Format and print SUMMARY line according to contract using summary service
+    summary_line = render_summary_line(total_files, result)
+    # Extract content after "SUMMARY " since log_summary adds the "SUMMARY " prefix
+    summary_content = summary_line[8:]  # Remove "SUMMARY " prefix
+    log_summary(summary_content)
     
     # Determine exit code
     if result.failed_files > 0 and result.success_files > 0:
