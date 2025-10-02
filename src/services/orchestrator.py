@@ -275,7 +275,7 @@ def _process_single_file(
             sheet_processes.append(sheet_result)
             total_inserted_rows += sheet_result.inserted_rows
         
-        # Note: skipped_sheets already calculated during sheet processing loop
+        
         
         # Commit transaction on success (if real DB connection)
         if cursor is not None:
