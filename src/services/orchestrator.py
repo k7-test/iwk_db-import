@@ -43,7 +43,8 @@ def _convert_config_to_domain_mappings(config: ImportConfig) -> dict[str, Domain
     for sheet_name, mapping_data in config.sheet_mappings.items():
         if not isinstance(mapping_data, dict):
             raise ProcessingError(
-                f"Invalid mapping data for sheet '{sheet_name}': expected a dict, got {type(mapping_data).__name__}"
+                f"Invalid mapping data for sheet '{sheet_name}': expected a dict, "
+                f"got {type(mapping_data).__name__}"
             )
         # Extract table name from mapping data
         table_name = mapping_data.get("table", sheet_name.lower())
@@ -274,9 +275,7 @@ def _process_single_file(
             sheet_processes.append(sheet_result)
             total_inserted_rows += sheet_result.inserted_rows
         
-        # Count skipped sheets (sheets in file but not in mappings)
-        all_sheet_names = set(raw_sheets.keys())
-        mapped_sheet_names = set(sheet_mappings.keys())
+        # Note: skipped_sheets already calculated during sheet processing loop
         
         # Commit transaction on success (if real DB connection)
         if cursor is not None:
