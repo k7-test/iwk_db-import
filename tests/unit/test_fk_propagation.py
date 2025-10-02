@@ -38,7 +38,7 @@ def sample_config() -> ImportConfig:
             ),
             "Orders": SheetMappingConfig(
                 sheet_name="Orders",
-                table_name="orders", 
+                table_name="orders",
                 sequence_columns={"id"},
                 fk_propagation_columns={"customer_id"}
             )
