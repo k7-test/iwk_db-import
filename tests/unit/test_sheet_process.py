@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import pytest
-from src.models.sheet_process import SheetProcess
+
 from src.models.config_models import SheetMappingConfig
 from src.models.row_data import RowData
+from src.models.sheet_process import SheetProcess
 
 
 def test_sheet_process_creation_minimal():

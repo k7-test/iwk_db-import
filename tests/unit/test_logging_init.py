@@ -4,8 +4,6 @@ import logging
 from io import StringIO
 from unittest.mock import patch
 
-import pytest
-
 from src.logging.error_log import ErrorLogBuffer
 from src.logging.init import get_logger, setup_logging
 from src.models.error_record import ErrorRecord

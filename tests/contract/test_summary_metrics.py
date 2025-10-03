@@ -71,9 +71,10 @@ def test_cli_success_populates_metrics(
 ):
     """Test Case 1: All success with populated metrics (rows>0, elapsed_sec>0, 
     throughput_rps>=0)."""
-    from unittest.mock import patch, MagicMock
-    from src.models.processing_result import ProcessingResult
     import os
+    from unittest.mock import patch
+
+    from src.models.processing_result import ProcessingResult
     
     reset_logging()  # Ensure clean logging state
     
@@ -168,9 +169,10 @@ def test_cli_partial_failure_metrics_consistency(
     temp_workdir: Path, write_config, dummy_excel_files, capsys
 ):
     """Test Case 2: Partial failure with failed>0 and exit code 2 consistency."""
-    from unittest.mock import patch, MagicMock
-    from src.models.processing_result import ProcessingResult
     import os
+    from unittest.mock import patch
+
+    from src.models.processing_result import ProcessingResult
     
     reset_logging()  # Ensure clean logging state
     

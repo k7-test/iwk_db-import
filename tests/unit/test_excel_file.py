@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -44,8 +44,8 @@ def test_excel_file_creation_with_defaults():
 def test_excel_file_creation_with_all_fields():
     """Test ExcelFile can be created with all fields specified."""
     file_path = Path("/test/complete.xlsx")
-    start_time = datetime(2025, 1, 1, 10, 0, 0, tzinfo=timezone.utc)
-    end_time = datetime(2025, 1, 1, 10, 5, 0, tzinfo=timezone.utc)
+    start_time = datetime(2025, 1, 1, 10, 0, 0, tzinfo=UTC)
+    end_time = datetime(2025, 1, 1, 10, 5, 0, tzinfo=UTC)
     
     excel_file = ExcelFile(
         path=file_path,

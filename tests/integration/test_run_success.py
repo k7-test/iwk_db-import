@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 from unittest.mock import patch
 
 import pandas as pd  # type: ignore
@@ -33,7 +33,7 @@ def _make_excel_file(
 
 
 @pytest.fixture
-def multi_file_excel_setup(temp_workdir: Path, write_config: Any) -> Dict[str, Any]:
+def multi_file_excel_setup(temp_workdir: Path, write_config: Any) -> dict[str, Any]:
     """Create 2 Excel files with multiple sheets containing test data."""
     data_dir = temp_workdir / "data"
     data_dir.mkdir(parents=True, exist_ok=True)
@@ -94,7 +94,7 @@ def multi_file_excel_setup(temp_workdir: Path, write_config: Any) -> Dict[str, A
 
 # Skip removed - using orchestrator mocking similar to contract tests
 def test_multi_file_run_success_integration(
-    temp_workdir: Path, multi_file_excel_setup: Dict[str, Any], capsys: Any
+    temp_workdir: Path, multi_file_excel_setup: dict[str, Any], capsys: Any
 ) -> None:
     """Test successful processing of 2 Excel files with multiple sheets each.
     
@@ -107,14 +107,16 @@ def test_multi_file_run_success_integration(
     6. Database operations are mocked but verify insert calls
     """
     import os
+
     from src.logging.init import reset_logging
     
     reset_logging()  # Ensure clean logging state
     setup = multi_file_excel_setup
     
     # Mock orchestrator to return successful processing results
-    from src.models.processing_result import ProcessingResult  
     from datetime import datetime, timedelta
+
+    from src.models.processing_result import ProcessingResult
     
     start_time = datetime.now()
     end_time = start_time + timedelta(seconds=2.0)
@@ -187,7 +189,7 @@ def test_multi_file_run_success_integration(
 
 
 def test_multi_file_excel_fixture_creates_valid_files(
-    multi_file_excel_setup: Dict[str, Any]
+    multi_file_excel_setup: dict[str, Any]
 ) -> None:
     """Verify the test fixture creates valid Excel files with expected structure."""
     setup = multi_file_excel_setup

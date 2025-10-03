@@ -105,10 +105,14 @@ def build_fk_propagation_maps(config: ImportConfig) -> list[FKPropagationMap]:
         
         # Determine PK column name from config.sequences or config.pk_columns if available
         parent_pk_column = None
-        # Try config.sequences: {table_name: {"column": pk_column, ...}, ...}
+        # Try config.sequences: it can be either {column_name: sequence_name} or {table_name: dict}
         if hasattr(config, "sequences") and parent_table in config.sequences:
             seq_info = config.sequences[parent_table]
-            parent_pk_column = seq_info.get("column", None)
+            if isinstance(seq_info, dict):
+                parent_pk_column = seq_info.get("column", None)
+            else:
+                # If it's a string, we can't directly get the column name
+                parent_pk_column = None
         # Or try config.pk_columns: {table_name: pk_column, ...}
         elif hasattr(config, "pk_columns") and parent_table in config.pk_columns:
             parent_pk_column = config.pk_columns[parent_table]

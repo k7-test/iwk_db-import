@@ -2,12 +2,12 @@ from __future__ import annotations
 
 from pathlib import Path
 from unittest.mock import MagicMock, patch
+
 import pytest
 
-from src.services.orchestrator import process_all, scan_excel_files, ProcessingError
 from src.config.loader import load_config
 from src.models.processing_result import ProcessingResult
-from src.models.excel_file import FileStatus
+from src.services.orchestrator import ProcessingError, process_all, scan_excel_files
 
 
 def test_scan_excel_files_success(temp_workdir: Path) -> None:
@@ -142,7 +142,9 @@ def test_process_all_partial_failure(temp_workdir: Path, write_config: Path) -> 
     assert "failed" in statuses
 
 
-def test_process_all_with_database_transaction_rollback(temp_workdir: Path, write_config: Path) -> None:
+def test_process_all_with_database_transaction_rollback(
+    temp_workdir: Path, write_config: Path
+) -> None:
     """Test T021: Database transaction rollback on file-level failure."""
     config = load_config(write_config)
     data_dir = temp_workdir / "data"
@@ -179,7 +181,8 @@ def test_process_all_with_database_transaction_rollback(temp_workdir: Path, writ
     # Verify transaction management calls
     execute_calls = mock_cursor.execute.call_args_list
     
-    # Should have: BEGIN (success file), COMMIT (success file), BEGIN (failure file), ROLLBACK (failure file)
+    # Should have: BEGIN (success file), COMMIT (success file), 
+    # BEGIN (failure file), ROLLBACK (failure file)
     begin_calls = [call for call in execute_calls if call[0][0] == "BEGIN"]
     commit_calls = [call for call in execute_calls if call[0][0] == "COMMIT"]
     rollback_calls = [call for call in execute_calls if call[0][0] == "ROLLBACK"]
@@ -220,7 +223,8 @@ def test_process_all_transaction_begin_failure(temp_workdir: Path, write_config:
 def test_process_all_config_conversion_error(temp_workdir: Path) -> None:
     """Test error handling during config conversion."""
     from unittest.mock import Mock
-    from src.models.config_models import ImportConfig, DatabaseConfig
+
+    from src.models.config_models import DatabaseConfig, ImportConfig
     
     # Create a config with invalid sheet_mappings that will trigger conversion error
     mock_config = Mock(spec=ImportConfig)

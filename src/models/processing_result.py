@@ -95,7 +95,8 @@ class BatchStatsAccumulator:
             p95_batch_seconds = self.batch_times[0]
         else:
             # Use quantiles for p95 calculation
-            quantile_index = int(PERCENTILE * QUANTILES) - 1  # 95th percentile index for 20 quantiles
+            # 95th percentile index for 20 quantiles
+            quantile_index = int(PERCENTILE * QUANTILES) - 1
             p95_batch_seconds = statistics.quantiles(
                 self.batch_times, n=QUANTILES, method='inclusive'
             )[quantile_index]

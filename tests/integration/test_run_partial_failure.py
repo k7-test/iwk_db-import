@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import Any, Dict
-from unittest.mock import patch, MagicMock
+from typing import Any
+from unittest.mock import patch
 
 import pandas as pd  # type: ignore
 import pytest
@@ -38,7 +38,7 @@ def _make_excel_file(
 
 
 @pytest.fixture
-def partial_failure_excel_setup(temp_workdir: Path, write_config: Any) -> Dict[str, Any]:
+def partial_failure_excel_setup(temp_workdir: Path, write_config: Any) -> dict[str, Any]:
     """Create Excel files: one successful, one that will cause constraint violation."""
     data_dir = temp_workdir / "data"
     data_dir.mkdir(parents=True, exist_ok=True)
@@ -64,7 +64,8 @@ def partial_failure_excel_setup(temp_workdir: Path, write_config: Any) -> Dict[s
             "Customers": [
                 ["Customer Data", "Sheet 1"],  # Title row (ignored) 
                 ["id", "name", "email"],       # Header row (2nd row)
-                [1, "Duplicate Alice", "alice@example.com"],  # Duplicate ID - will violate constraint
+                # Duplicate ID - will violate constraint
+                [1, "Duplicate Alice", "alice@example.com"],
                 [1, "Another Duplicate", "alice2@example.com"],  # Another duplicate ID
             ],
         }
@@ -83,7 +84,7 @@ def partial_failure_excel_setup(temp_workdir: Path, write_config: Any) -> Dict[s
 
 # Skip removed - using orchestrator mocking similar to contract tests
 def test_partial_failure_rollback_integration(
-    temp_workdir: Path, partial_failure_excel_setup: Dict[str, Any], capsys: Any
+    temp_workdir: Path, partial_failure_excel_setup: dict[str, Any], capsys: Any
 ) -> None:
     """Test partial failure: one file violates constraint → rollback, other commits successfully.
     
@@ -97,14 +98,16 @@ def test_partial_failure_rollback_integration(
     7. Only successful file's rows are counted in total
     """
     import os
+
     from src.logging.init import reset_logging
     
     reset_logging()  # Ensure clean logging state
     setup = partial_failure_excel_setup
     
     # Mock orchestrator to return partial failure results
-    from src.models.processing_result import ProcessingResult
     from datetime import datetime, timedelta
+
+    from src.models.processing_result import ProcessingResult
     
     start_time = datetime.now()
     end_time = start_time + timedelta(seconds=3.0)
@@ -175,11 +178,13 @@ def test_partial_failure_rollback_integration(
     
     # Verify no startup errors (should have gotten past initialization)
     assert "ERROR config:" not in output, f"Unexpected config error in output: {output}"
-    assert "ERROR directory not found:" not in output, f"Unexpected directory error in output: {output}"
+    assert (
+        "ERROR directory not found:" not in output
+    ), f"Unexpected directory error in output: {output}"
 
 
 def test_partial_failure_excel_fixture_creates_valid_files(
-    partial_failure_excel_setup: Dict[str, Any]
+    partial_failure_excel_setup: dict[str, Any]
 ) -> None:
     """Verify the test fixture creates valid Excel files with expected structure."""
     setup = partial_failure_excel_setup
@@ -200,7 +205,9 @@ def test_partial_failure_excel_fixture_creates_valid_files(
     successful_df = successful_data.parse("Customers", header=None)
     failing_df = failing_data.parse("Customers", header=None)
     
-    assert len(successful_df) == 4, "Expected 4 rows in successful file (title + header + 2 data rows)"
+    assert len(successful_df) == 4, (
+        "Expected 4 rows in successful file (title + header + 2 data rows)"
+    )
     assert len(failing_df) == 4, "Expected 4 rows in failing file (title + header + 2 data rows)"
     
     # Verify header structure

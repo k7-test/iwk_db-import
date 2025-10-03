@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 from pathlib import Path as _P
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 from src.cli import main as cli_main
 from src.logging.init import reset_logging
