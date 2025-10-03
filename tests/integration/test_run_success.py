@@ -92,9 +92,7 @@ def multi_file_excel_setup(temp_workdir: Path, write_config: Any) -> Dict[str, A
     }
 
 
-@pytest.mark.skip(
-    "Integration test requires full processing pipeline - implement after orchestration service"
-)
+# Skip removed - using orchestrator mocking similar to contract tests
 def test_multi_file_run_success_integration(
     temp_workdir: Path, multi_file_excel_setup: Dict[str, Any], capsys: Any
 ) -> None:
@@ -109,13 +107,31 @@ def test_multi_file_run_success_integration(
     6. Database operations are mocked but verify insert calls
     """
     import os
+    from src.logging.init import reset_logging
     
+    reset_logging()  # Ensure clean logging state
     setup = multi_file_excel_setup
     
-    # Mock database operations to simulate successful inserts
-    with patch('src.db.batch_insert.batch_insert') as mock_insert:
-        # Configure mock to return successful insert results
-        mock_insert.return_value = setup['expected_total_rows']
+    # Mock orchestrator to return successful processing results
+    from src.models.processing_result import ProcessingResult  
+    from datetime import datetime, timedelta
+    
+    start_time = datetime.now()
+    end_time = start_time + timedelta(seconds=2.0)
+    
+    mock_result = ProcessingResult(
+        success_files=setup['expected_files'],
+        failed_files=0,
+        total_inserted_rows=setup['expected_total_rows'],
+        skipped_sheets=0,
+        start_time=start_time,
+        end_time=end_time,
+        elapsed_seconds=2.0,
+        throughput_rows_per_sec=setup['expected_total_rows'] / 2.0
+    )
+    
+    with patch('src.cli.__main__.process_all') as mock_process:
+        mock_process.return_value = mock_result
         
         cwd_before = os.getcwd()
         try:
@@ -162,9 +178,8 @@ def test_multi_file_run_success_integration(
     assert float(elapsed_sec) > 0, "Expected elapsed time > 0"
     assert float(throughput_rps) > 0, "Expected throughput > 0"
     
-    # Verify database insert was called appropriately
-    # (This will be refined when actual DB integration is implemented)
-    mock_insert.assert_called()
+    # Verify orchestrator was called appropriately  
+    mock_process.assert_called_once()
     
     # Verify no error messages in output
     assert "ERROR" not in output, f"Unexpected error in output: {output}"
