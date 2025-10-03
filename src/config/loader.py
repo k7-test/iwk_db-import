@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import yaml
 
@@ -16,12 +16,16 @@ Responsibilities:
 - DO NOT implement full logic yet.
 """
 
-try:
+if TYPE_CHECKING:
     import jsonschema
     from jsonschema.exceptions import ValidationError
-except ImportError:  # pragma: no cover
-    jsonschema = None  # type: ignore[assignment]
-    ValidationError = Exception  # type: ignore
+else:
+    try:
+        import jsonschema
+        from jsonschema.exceptions import ValidationError
+    except ImportError:  # pragma: no cover
+        jsonschema = None  # type: ignore[assignment]
+        ValidationError = Exception  # type: ignore[misc,assignment]
 
 
 # Get schema path relative to the repository root
