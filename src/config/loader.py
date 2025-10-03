@@ -21,7 +21,7 @@ try:
     from jsonschema.exceptions import ValidationError
 except ImportError:  # pragma: no cover
     jsonschema = None  # type: ignore[assignment]
-    ValidationError = Exception  # type: ignore[assignment,misc]
+    ValidationError = Exception  # type: ignore
 
 
 # Get schema path relative to the repository root
