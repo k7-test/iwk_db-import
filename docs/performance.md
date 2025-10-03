@@ -1,6 +1,6 @@
 # Performance Report
 
-**Feature**: Excel -> PostgreSQL bulk import CLI (Branch `001-excel-postgressql-excel`)  
+**Feature**: Excel -> PostgreSQL bulk import CLI (Branch `001-excel-postgresql-excel`)  
 **Date**: 2025-09-26  
 **Status**: Performance baseline established  
 
@@ -27,8 +27,8 @@ Based on specifications (QR-004, QR-005, QR-006) and research decisions (R-001, 
 - **Dataset**: 50,000 rows × 40 columns (synthetic data with mixed types)
 - **Batch Size**: 1,000 rows (default)
 - **Elapsed Time**: 5.000 seconds
-- **Throughput**: **9,999.1 rows/sec** (12.5× above minimum)
-- **DB Calls**: 1 (execute_values handles internal batching)
+- **Throughput**: **10,000.0 rows/sec** (12.5× above minimum)
+- **DB Calls**: 1 (single multi-row INSERT via execute_values; no internal batching occurred)
 
 **Result**: ✅ **PASS** - Significantly exceeds 800 rows/sec target
 
@@ -40,9 +40,9 @@ Based on specifications (QR-004, QR-005, QR-006) and research decisions (R-001, 
 
 | Batch Size | Elapsed Time | Throughput | DB Calls | Performance vs 500 |
 |------------|--------------|------------|----------|-------------------|
-| 500 | 1.0202s | 9,801.8 rps | 1 | baseline |
-| **1000** | 1.0102s | 9,898.6 rps | 1 | 1.01× faster |
-| **2000** | 1.0052s | **9,948.1 rps** | 1 | 1.01× faster |
+| 500 | 1.0202 seconds | 9,801.8 rps | 1 | baseline |
+| **1000** | 1.0102 seconds | 9,898.6 rps | 1 | 1.01× faster |
+| **2000** | 1.0052 seconds | **9,948.1 rps** | 1 | 1.01× faster |
 
 **Analysis**:
 - Batch size 2000 shows marginal improvement in throughput
