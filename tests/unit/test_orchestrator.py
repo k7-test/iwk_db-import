@@ -142,7 +142,9 @@ def test_process_all_partial_failure(temp_workdir: Path, write_config: Path) -> 
     assert "failed" in statuses
 
 
-def test_process_all_with_database_transaction_rollback(temp_workdir: Path, write_config: Path) -> None:
+def test_process_all_with_database_transaction_rollback(
+    temp_workdir: Path, write_config: Path
+) -> None:
     """Test T021: Database transaction rollback on file-level failure."""
     config = load_config(write_config)
     data_dir = temp_workdir / "data"
@@ -179,7 +181,8 @@ def test_process_all_with_database_transaction_rollback(temp_workdir: Path, writ
     # Verify transaction management calls
     execute_calls = mock_cursor.execute.call_args_list
     
-    # Should have: BEGIN (success file), COMMIT (success file), BEGIN (failure file), ROLLBACK (failure file)
+    # Should have: BEGIN (success file), COMMIT (success file), 
+    # BEGIN (failure file), ROLLBACK (failure file)
     begin_calls = [call for call in execute_calls if call[0][0] == "BEGIN"]
     commit_calls = [call for call in execute_calls if call[0][0] == "COMMIT"]
     rollback_calls = [call for call in execute_calls if call[0][0] == "ROLLBACK"]

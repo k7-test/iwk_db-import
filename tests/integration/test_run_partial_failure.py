@@ -64,7 +64,8 @@ def partial_failure_excel_setup(temp_workdir: Path, write_config: Any) -> dict[s
             "Customers": [
                 ["Customer Data", "Sheet 1"],  # Title row (ignored) 
                 ["id", "name", "email"],       # Header row (2nd row)
-                [1, "Duplicate Alice", "alice@example.com"],  # Duplicate ID - will violate constraint
+                # Duplicate ID - will violate constraint
+                [1, "Duplicate Alice", "alice@example.com"],
                 [1, "Another Duplicate", "alice2@example.com"],  # Another duplicate ID
             ],
         }
@@ -177,7 +178,9 @@ def test_partial_failure_rollback_integration(
     
     # Verify no startup errors (should have gotten past initialization)
     assert "ERROR config:" not in output, f"Unexpected config error in output: {output}"
-    assert "ERROR directory not found:" not in output, f"Unexpected directory error in output: {output}"
+    assert (
+        "ERROR directory not found:" not in output
+    ), f"Unexpected directory error in output: {output}"
 
 
 def test_partial_failure_excel_fixture_creates_valid_files(
@@ -202,7 +205,9 @@ def test_partial_failure_excel_fixture_creates_valid_files(
     successful_df = successful_data.parse("Customers", header=None)
     failing_df = failing_data.parse("Customers", header=None)
     
-    assert len(successful_df) == 4, "Expected 4 rows in successful file (title + header + 2 data rows)"
+    assert len(successful_df) == 4, (
+        "Expected 4 rows in successful file (title + header + 2 data rows)"
+    )
     assert len(failing_df) == 4, "Expected 4 rows in failing file (title + header + 2 data rows)"
     
     # Verify header structure

@@ -1,7 +1,22 @@
 #!/usr/bin/env bash
 
-# Quality Gate Script for Excel -> PostgreSQL Import CLI
-# Ensures code quality standards: ruff, mypy, pytest (≥90% coverage), perf smoke
+# Quality Gate Script for Excel -> PostgreSQL Import CLI (T039)
+# 
+# This script ensures all code quality standards are met before code changes
+# are accepted. It runs four critical checks:
+#
+# 1. RUFF: Code linting and formatting checks
+# 2. MYPY: Static type checking for type safety
+# 3. PYTEST: Unit/integration tests with ≥90% coverage requirement
+# 4. PERF_SMOKE: Performance smoke test ensuring execution under threshold
+#
+# Usage: ./scripts/quality_gate.sh
+# Exit codes: 0 = all checks passed, 1 = one or more checks failed
+#
+# Requirements:
+# - Python 3.11+
+# - All dev dependencies installed: pip install -e .[dev]
+# - Type stubs installed: pip install types-tqdm pandas-stubs types-jsonschema
 
 set -e  # Exit on any error
 set -u  # Exit on undefined variables

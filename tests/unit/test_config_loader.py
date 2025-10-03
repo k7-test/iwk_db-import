@@ -23,7 +23,9 @@ def test_load_config_missing_file(temp_workdir: Path):
 
 def test_load_config_missing_required(write_config: Path):
     # remove required key
-    text = write_config.read_text(encoding="utf-8").replace("fk_propagations:\n  customer_id: id\n", "")
+    text = write_config.read_text(encoding="utf-8").replace(
+        "fk_propagations:\n  customer_id: id\n", ""
+    )
     write_config.write_text(text, encoding="utf-8")
     with pytest.raises(ConfigError) as e:
         load_config(write_config)

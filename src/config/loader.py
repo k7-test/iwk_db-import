@@ -20,8 +20,8 @@ try:
     import jsonschema
     from jsonschema.exceptions import ValidationError
 except ImportError:  # pragma: no cover
-    jsonschema = None
-    ValidationError = Exception
+    jsonschema = None  # type: ignore[assignment]
+    ValidationError = Exception  # type: ignore[assignment,misc]
 
 
 # Get schema path relative to the repository root
