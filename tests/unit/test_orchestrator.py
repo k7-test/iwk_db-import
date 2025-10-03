@@ -219,30 +219,21 @@ def test_process_all_transaction_begin_failure(temp_workdir: Path, write_config:
 
 def test_process_all_config_conversion_error(temp_workdir: Path) -> None:
     """Test error handling during config conversion."""
-    # Create config with invalid sheet mappings structure 
-    invalid_config = """source_directory: ./data
-sheet_mappings: null
-sequences:
-  id: customers_id_seq
-fk_propagations:
-  customer_id: id
-timezone: UTC
-database:
-  host: localhost
-  port: 5432
-  user: appuser
-  password: secret
-  database: appdb
-"""
+    from unittest.mock import Mock
+    from src.models.config_models import ImportConfig, DatabaseConfig
     
-    config_path = temp_workdir / "config" / "import.yml"
-    config_path.write_text(invalid_config, encoding="utf-8")
+    # Create a config with invalid sheet_mappings that will trigger conversion error
+    mock_config = Mock(spec=ImportConfig)
+    mock_config.sheet_mappings = {"Customers": "not a dict"}  # This should cause ProcessingError
+    mock_config.sequences = {}
+    mock_config.fk_propagations = {}
+    mock_config.source_directory = "./data"
+    mock_config.database = DatabaseConfig(
+        host="localhost", port=5432, user="user", password="pass", database="db", dsn=None
+    )
     
-    from src.config.loader import load_config
-    config = load_config(config_path)
-    
-    with pytest.raises(ProcessingError, match="Invalid configuration"):
-        process_all(config, cursor=None)
+    with pytest.raises(ProcessingError, match="Invalid mapping data"):
+        process_all(mock_config, cursor=None)
 
 
 def test_process_all_directory_scanning_error(temp_workdir: Path, sample_config_yaml: str) -> None:
