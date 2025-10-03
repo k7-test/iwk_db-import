@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 
 from src.models.config_models import DatabaseConfig, ImportConfig, SheetMappingConfig
@@ -350,3 +352,140 @@ def test_needs_returning_with_multiple_children() -> None:
     # After processing both children, should not need RETURNING
     processed_tables.add("addresses")
     assert needs_returning("customers", config, processed_tables) is False
+
+
+def test_needs_returning_with_invalid_format_mappings() -> None:
+    """Test needs_returning handles invalid format FK mappings gracefully."""
+    config = ImportConfig(
+        source_directory="test_data",
+        sheet_mappings={},
+        sequences={},
+        fk_propagations={
+            "no_dots": "also_no_dots",           # No dots in either
+            "parent.col": "no_dot_child",        # Child missing dot  
+            "no_dot_parent": "child.col",        # Parent missing dot
+            "customers.name": "orders.customer_id"  # Valid format
+        },
+        timezone="UTC",
+        database=DatabaseConfig(
+            host=None, port=None, user=None, password=None, database=None, dsn=None
+        )
+    )
+    
+    processed_tables: set[str] = set()
+    
+    # Should return True only for the valid mapping (customers -> orders)
+    assert needs_returning("customers", config, processed_tables) is True
+    
+    # Tables referenced in invalid mappings should return False
+    assert needs_returning("parent", config, processed_tables) is False
+    assert needs_returning("no_dot_parent", config, processed_tables) is False
+
+
+def test_build_fk_propagation_maps_with_sequences_dict() -> None:
+    """Test building FK propagation maps when sequences config contains dict values."""
+    # Note: This test uses type: ignore because the actual config schema expects
+    # sequences to be dict[str, str], but we want to test the robustness
+    # of the FK propagation logic when dealing with dict values
+    config = ImportConfig(
+        source_directory="test_data",
+        sheet_mappings={},
+        sequences={
+            "customers": {"column": "customer_id", "sequence": "customers_id_seq"},  # type: ignore[dict-item]
+            "orders": "orders_id_seq"  # Mixed format - string value
+        },
+        fk_propagations={
+            "customers.name": "orders.customer_id"
+        },
+        timezone="UTC",
+        database=DatabaseConfig(
+            host=None, port=None, user=None, password=None, database=None, dsn=None
+        )
+    )
+    
+    maps = build_fk_propagation_maps(config)
+    
+    assert len(maps) == 1
+    fk_map = maps[0]
+    assert fk_map.parent_table == "customers"
+    assert fk_map.parent_pk_column == "customer_id"  # From sequences dict
+
+
+def test_build_fk_propagation_maps_with_pk_columns_config() -> None:
+    """Test building FK propagation maps when config has pk_columns attribute."""
+    # Create a config class that has pk_columns attribute for testing
+    class ConfigWithPkColumns(ImportConfig):
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
+            super().__init__(*args, **kwargs)
+            object.__setattr__(self, 'pk_columns', {"products": "product_pk"})
+    
+    config: ImportConfig = ConfigWithPkColumns(
+        source_directory="test_data",
+        sheet_mappings={},
+        sequences={},
+        fk_propagations={
+            "products.sku": "order_items.product_id"
+        },
+        timezone="UTC",
+        database=DatabaseConfig(
+            host=None, port=None, user=None, password=None, database=None, dsn=None
+        )
+    )
+    
+    maps = build_fk_propagation_maps(config)
+    
+    assert len(maps) == 1
+    fk_map = maps[0]
+    assert fk_map.parent_table == "products"
+    assert fk_map.parent_pk_column == "product_pk"  # From pk_columns
+
+
+def test_build_fk_propagation_maps_fallback_to_id() -> None:
+    """Test building FK propagation maps falls back to 'id' when no sequence info found."""
+    config = ImportConfig(
+        source_directory="test_data",
+        sheet_mappings={},
+        sequences={},  # No sequence info for the table
+        fk_propagations={
+            "categories.name": "products.category_id"
+        },
+        timezone="UTC",
+        database=DatabaseConfig(
+            host=None, port=None, user=None, password=None, database=None, dsn=None
+        )
+    )
+    
+    maps = build_fk_propagation_maps(config)
+    
+    assert len(maps) == 1
+    fk_map = maps[0]
+    assert fk_map.parent_table == "categories"
+    assert fk_map.parent_pk_column == "id"  # Fallback value
+
+
+def test_build_fk_propagation_maps_with_empty_split_parts() -> None:
+    """Test building FK propagation maps with empty parts after splitting."""
+    config = ImportConfig(
+        source_directory="test_data",
+        sheet_mappings={},
+        sequences={},
+        fk_propagations={
+            ".col": "child.col",                  # Empty parent table name
+            "parent.": "child.col",               # Empty parent column name  
+            "table.col": ".col",                  # Empty child table name
+            "other.col": "child.",                # Empty child column name
+            "normal.col": "normal.child_col"      # Valid format for comparison
+        },
+        timezone="UTC",
+        database=DatabaseConfig(
+            host=None, port=None, user=None, password=None, database=None, dsn=None
+        )
+    )
+    
+    maps = build_fk_propagation_maps(config)
+    
+    # All should create maps since split(".", 1) always creates 2 parts
+    # The validation happens at a different level - empty names are allowed
+    assert len(maps) == 5
+    
+    
