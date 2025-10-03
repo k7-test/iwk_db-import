@@ -105,10 +105,11 @@ def build_fk_propagation_maps(config: ImportConfig) -> list[FKPropagationMap]:
         
         # Determine PK column name from config.sequences or config.pk_columns if available
         parent_pk_column = None
-        # Try config.sequences: {table_name: {"column": pk_column, ...}, ...}
-        if hasattr(config, "sequences") and parent_table in config.sequences:
-            seq_info = config.sequences[parent_table]
-            parent_pk_column = seq_info.get("column", None)
+        # Try config.sequences: {column_name: sequence_name, ...}
+        # We need to find the column name that maps to this table's sequence
+        if hasattr(config, "sequences"):
+            # For now, we don't have a direct table->column mapping, so we'll use fallback
+            parent_pk_column = None
         # Or try config.pk_columns: {table_name: pk_column, ...}
         elif hasattr(config, "pk_columns") and parent_table in config.pk_columns:
             parent_pk_column = config.pk_columns[parent_table]

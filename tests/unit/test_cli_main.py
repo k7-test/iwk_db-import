@@ -1,5 +1,7 @@
 from __future__ import annotations
+
 from pathlib import Path
+
 from src.cli import main as cli_main
 from src.logging.init import reset_logging
 

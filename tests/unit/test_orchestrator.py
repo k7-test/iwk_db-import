@@ -2,12 +2,12 @@ from __future__ import annotations
 
 from pathlib import Path
 from unittest.mock import MagicMock, patch
+
 import pytest
 
-from src.services.orchestrator import process_all, scan_excel_files, ProcessingError
 from src.config.loader import load_config
 from src.models.processing_result import ProcessingResult
-from src.models.excel_file import FileStatus
+from src.services.orchestrator import ProcessingError, process_all, scan_excel_files
 
 
 def test_scan_excel_files_success(temp_workdir: Path) -> None:
@@ -220,7 +220,8 @@ def test_process_all_transaction_begin_failure(temp_workdir: Path, write_config:
 def test_process_all_config_conversion_error(temp_workdir: Path) -> None:
     """Test error handling during config conversion."""
     from unittest.mock import Mock
-    from src.models.config_models import ImportConfig, DatabaseConfig
+
+    from src.models.config_models import DatabaseConfig, ImportConfig
     
     # Create a config with invalid sheet_mappings that will trigger conversion error
     mock_config = Mock(spec=ImportConfig)

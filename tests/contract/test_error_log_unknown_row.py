@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 """Error log row=-1 sentinel contract test (T007).
 
 Validates that the error log JSON schema accepts row=-1 as a sentinel value

@@ -1,5 +1,12 @@
 from __future__ import annotations
 
+import json
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+
+import yaml
+
 """Config loader skeleton (Phase 1) - Failing tests will drive implementation.
 
 Responsibilities:
@@ -8,19 +15,13 @@ Responsibilities:
 - Apply defaults (timezone=UTC if missing)
 - DO NOT implement full logic yet.
 """
-import json
-from dataclasses import dataclass
-from pathlib import Path
-from typing import Any
-
-import yaml
 
 try:
-    import jsonschema  # type: ignore
-    from jsonschema.exceptions import ValidationError  # type: ignore
+    import jsonschema
+    from jsonschema.exceptions import ValidationError
 except ImportError:  # pragma: no cover
-    jsonschema = None  # type: ignore
-    ValidationError = Exception  # type: ignore
+    jsonschema = None
+    ValidationError = Exception
 
 
 # Get schema path relative to the repository root
@@ -64,7 +65,8 @@ def _validate_config_schema(data: dict[str, Any]) -> None:
             - The jsonschema library is not available.
             - The schema file does not exist.
             - The schema file is not valid JSON.
-            - The config data fails schema validation (e.g., missing required keys, wrong types, or other schema violations).
+            - The config data fails schema validation (e.g., missing required keys, 
+              wrong types, or other schema violations).
     """
     if jsonschema is None:
         raise ConfigError("jsonschema library is required for config validation")
@@ -74,7 +76,7 @@ def _validate_config_schema(data: dict[str, Any]) -> None:
     
     try:
         schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
-        jsonschema.validate(data, schema)  # type: ignore
+        jsonschema.validate(data, schema)
     except json.JSONDecodeError as e:
         raise ConfigError(f"invalid schema file: {e}") from e
     except ValidationError as e:

@@ -1,7 +1,10 @@
 from __future__ import annotations
-import pytest
+
 from pathlib import Path
-from src.config.loader import load_config, ConfigError
+
+import pytest
+
+from src.config.loader import ConfigError, load_config
 
 
 def test_load_config_success(write_config: Path):

@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 """Error log JSON schema contract test (FR-030)."""
 import json
 import pathlib

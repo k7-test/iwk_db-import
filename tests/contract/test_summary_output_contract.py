@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 """SUMMARY 行フォーマット契約テスト (contracts/summary_output.md)
 まだ CLI 未実装なので正規表現パターンのみ検証。
 """

@@ -1,8 +1,11 @@
 from __future__ import annotations
+
+from pathlib import Path
+
 import pandas as pd
 import pytest
-from pathlib import Path
-from src.excel.reader import read_excel_file, normalize_sheet, SheetHeaderError, MissingColumnsError
+
+from src.excel.reader import MissingColumnsError, SheetHeaderError, normalize_sheet, read_excel_file
 
 
 def _make_excel(tmp_path: Path, name: str, sheets: dict[str, list[list[object]]]) -> Path:

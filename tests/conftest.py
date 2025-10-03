@@ -1,10 +1,11 @@
 # Shared pytest fixtures (Phase 1 scaffolding)
 from __future__ import annotations
-import os
+
 import tempfile
 from pathlib import Path
-import json
+
 import pytest
+
 
 @pytest.fixture()
 def temp_workdir(monkeypatch) -> Path:

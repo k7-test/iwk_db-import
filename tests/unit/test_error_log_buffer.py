@@ -1,7 +1,9 @@
 from __future__ import annotations
+
 import json
 from pathlib import Path
-from src.logging.error_log import ErrorRecord, ErrorLogBuffer
+
+from src.logging.error_log import ErrorLogBuffer, ErrorRecord
 
 
 def test_error_record_creation_and_json_line():
