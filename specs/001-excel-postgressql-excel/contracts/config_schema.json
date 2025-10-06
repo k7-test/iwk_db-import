@@ -42,6 +42,11 @@
                 "type": "string"
               },
               "description": "親テーブルから値を伝播する列"
+            },
+            "default_values": {
+              "type": "object",
+              "description": "空セル時にNULLではなく適用する列名→デフォルト値マップ",
+              "additionalProperties": true
             }
           }
         }
@@ -57,13 +62,27 @@
       }
     },
     "fk_propagations": {
-      "type": "object",
-      "description": "親列→子列 (複数指定可)",
-      "patternProperties": {
-        ".+": {
-          "type": "string"
+      "description": "親列→子列マッピング。後方互換: object 形式(旧) / array 形式(新, {parent, child} の配列) を許容",
+      "oneOf": [
+        {
+          "type": "object",
+          "patternProperties": {
+            ".+": { "type": "string" }
+          }
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["parent", "child"],
+            "additionalProperties": false,
+            "properties": {
+              "parent": { "type": "string" },
+              "child": { "type": "string" }
+            }
+          }
         }
-      }
+      ]
     },
     "timezone": {
       "type": "string",

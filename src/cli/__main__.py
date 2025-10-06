@@ -1,9 +1,20 @@
 from __future__ import annotations
 
+import os
+from typing import TYPE_CHECKING
 import sys
+from contextlib import contextmanager
 from pathlib import Path
+import argparse
 
 from src.config.loader import ConfigError, load_config
+try:  # pragma: no cover - import guard
+    from dotenv import load_dotenv  # type: ignore
+except Exception:  # pragma: no cover
+    load_dotenv = None  # type: ignore
+    
+if TYPE_CHECKING:  # 型チェック時は stub を想定
+    from dotenv import load_dotenv as _load_dotenv_type  # noqa: F401
 from src.logging.init import log_summary, setup_logging
 from src.services.orchestrator import ProcessingError, process_all
 from src.services.summary import render_summary_line
@@ -25,11 +36,129 @@ EXIT_FATAL = 1
 
 
 
+@contextmanager
+def _db_connection(cfg):  # pragma: no cover (thin wrapper; tested via integration)
+    """Context manager to provide a psycopg2 connection + cursor.
+
+        接続情報の最終的な解決優先順位 (ユーザー要望: .env を最優先):
+            1. `.env` で読み込まれた環境変数 (main() 冒頭で強制上書き済み)
+            2. 既にプロセスに存在していた環境変数 (上書きモードなので 1 と同列として扱われる)
+                 - DATABASE_URL / PGDSN があれば DSN 全体をそのまま使用
+                 - 個別 PGHOST / PGPORT / PGUSER / PGPASSWORD / PGDATABASE
+            3. config/import.yml の database セクション (不足分のフォールバック)
+    """
+    try:
+        import psycopg2  # type: ignore
+    except Exception as e:  # psycopg2-binary が依存にある想定
+        raise RuntimeError(f"psycopg2 not available: {e}") from e
+
+    db_cfg = cfg.database
+    # 直接 DSN (環境変数優先)
+    dsn_env = (
+        os.getenv("DATABASE_URL")
+        or os.getenv("PGDSN")
+        or db_cfg.dsn
+    )
+    if dsn_env:
+        dsn = dsn_env
+    else:
+        host = os.getenv("PGHOST", db_cfg.host or "localhost")
+        port = os.getenv("PGPORT", str(db_cfg.port) if db_cfg.port else "5432")
+        user = os.getenv("PGUSER", db_cfg.user or "postgres")
+        password = os.getenv("PGPASSWORD", db_cfg.password or "")
+        database = os.getenv("PGDATABASE", db_cfg.database or "postgres")
+        dsn = f"host={host} port={port} user={user} dbname={database}"
+        if password:
+            dsn += f" password={password}"
+
+    conn = None
+    cur = None
+    try:
+        conn = psycopg2.connect(dsn)
+        conn.autocommit = False  # 明示トランザクション境界 (orchestrator が BEGIN/COMMIT 実行)
+        cur = conn.cursor()
+        yield cur
+        # orchestrator 内で COMMIT 発生した前提。失敗時は rollback safety.
+        if not conn.closed:
+            try:
+                # もし COMMIT 忘れで open ならここでコミット (冪等)
+                conn.commit()
+            except Exception:
+                conn.rollback()
+    finally:
+        if cur is not None:
+            try:
+                cur.close()
+            except Exception:  # pragma: no cover
+                pass
+        if conn is not None:
+            try:
+                conn.close()
+            except Exception:  # pragma: no cover
+                pass
+
+
+def _load_env_file(path: Path, override: bool = True) -> None:
+    """Load .env using python-dotenv.
+
+    override=True により .env の値で既存環境変数を上書きし、PostgreSQL 接続情報を最優先化。
+    失敗時は警告を出すのみで続行。
+    """
+    try:
+        if path.exists() and load_dotenv is not None:
+            load_dotenv(dotenv_path=path, override=override)  # type: ignore[misc]
+    except Exception as e:  # pragma: no cover
+        print(f"WARNING: failed to load .env via python-dotenv: {e}")
+
+
+def _parse_args(argv: list[str]) -> argparse.Namespace:
+    p = argparse.ArgumentParser(description="Excel -> PostgreSQL bulk importer")
+    p.add_argument("--debug", action="store_true", help="Enable debug logging")
+    p.add_argument("--inspect-data", action="store_true", help="Print sheet headers & first rows then exit")
+    return p.parse_args(argv)
+
+
+def _inspect_data(cfg) -> int:
+    from src.excel.reader import read_excel_file, normalize_sheet
+    import json
+    directory = Path(cfg.source_directory)
+    if not directory.exists():
+        print(f"inspect: directory not found: {directory}")
+        return EXIT_FATAL
+    excel_files = [p for p in directory.iterdir() if p.suffix == ".xlsx"]
+    if not excel_files:
+        print("inspect: no .xlsx files")
+        return 0
+    for f in excel_files:
+        print(f"FILE: {f.name}")
+        try:
+            raw = read_excel_file(f, target_sheets=None)
+        except Exception as e:  # pragma: no cover
+            print(f"  read_error: {e}")
+            continue
+        for sname, df in raw.items():
+            try:
+                sd = normalize_sheet(df, sname, expected_columns=None)
+                sample = sd.rows[:3]
+                print(f"  SHEET: {sname} cols={sd.columns}")
+                # datetime 含む場合 JSON 化失敗するため repr で fallback
+                safe_rows = []
+                for r in sample:
+                    safe_rows.append({k: (v.isoformat() if hasattr(v, 'isoformat') else v) for k, v in r.items()})
+                print("    sample_rows=", safe_rows)
+            except Exception as e:  # pragma: no cover
+                print(f"  SHEET: {sname} error={e}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     # Initialize logging system with labeled prefixes
     logger = setup_logging()
     
     argv = argv or sys.argv[1:]
+    args = _parse_args(argv)
+    # .env を最優先で読み込む (DB 接続パラメータ優先順位保証)
+    _load_env_file(Path('.env'), override=True)
     # 将来: オプション追加 (dry-run / verbose 等)
     config_path = Path("config/import.yml")
     try:
@@ -43,14 +172,38 @@ def main(argv: list[str] | None = None) -> int:
         logger.error(f"directory not found: {directory}")
         return EXIT_FATAL
 
+    if args.debug:
+        # 再設定
+        for h in logger.handlers:
+            h.setLevel("DEBUG")
+        logger.setLevel("DEBUG")
+        logger.debug("debug mode enabled")
+
     logger.info(f"Processing files from: {directory}")
 
-    # Process all files using orchestrator
+    if args.inspect_data:
+        return _inspect_data(cfg)
+
+    # DB 接続 (実接続) を試み、失敗ならフォールバック: mock モードで動かしつつ警告
+    cursor = None
+    db_mode = "mock"
     try:
-        result = process_all(cfg, cursor=None)  # Mock mode for now
-    except ProcessingError as e:
-        logger.error(f"processing: {e}")
-        return EXIT_FATAL
+        with _db_connection(cfg) as cur:
+            db_mode = "live"
+            try:
+                result = process_all(cfg, cursor=cur)
+            except ProcessingError as e:
+                logger.error(f"processing: {e}")
+                return EXIT_FATAL
+    except Exception as db_e:
+        logger.warning(f"DB connection failed -> fallback to mock mode: {db_e}")
+        try:
+            result = process_all(cfg, cursor=None)
+        except ProcessingError as e:
+            logger.error(f"processing(mock): {e}")
+            return EXIT_FATAL
+
+    logger.info(f"mode={db_mode} total_rows={result.total_inserted_rows}")
     
     # Calculate total files processed
     total_files = result.success_files + result.failed_files

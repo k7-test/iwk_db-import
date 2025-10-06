@@ -50,7 +50,10 @@ def read_excel_file(
 
 
 def normalize_sheet(
-    df: pd.DataFrame, sheet_name: str, expected_columns: set[str] | None = None
+    df: pd.DataFrame,
+    sheet_name: str,
+    expected_columns: set[str] | None = None,
+    default_values: dict[str, Any] | None = None,
 ) -> SheetData:
     """Normalize a raw DataFrame using second row as header.
 
@@ -74,8 +77,16 @@ def normalize_sheet(
         row_dict: dict[str, Any] = {}
         for col, val in zip(columns, raw.tolist(), strict=False):
             if pd.isna(val):
-                row_dict[col] = None
+                if default_values and col in default_values:
+                    row_dict[col] = default_values[col]
+                else:
+                    row_dict[col] = None
             else:
+                # 空文字 / ホワイトスペースのみも default_values 適用対象
+                if isinstance(val, str) and val.strip() == "":
+                    if default_values and col in default_values:
+                        row_dict[col] = default_values[col]
+                        continue
                 row_dict[col] = val
         rows.append(row_dict)
 

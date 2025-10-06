@@ -39,6 +39,7 @@ class SheetMappingConfig:
     table_name: str  # Target database table name
     sequence_columns: set[str]  # Columns with auto-generated values (ignore Excel values)
     fk_propagation_columns: set[str]  # Columns that get values from parent records
+    default_values: dict[str, object] | None = None  # 空セル時適用デフォルト
     
     @property
     def expected_columns(self) -> set[str]:
