@@ -219,30 +219,41 @@ def test_partial_failure_excel_fixture_creates_valid_files(
     assert failing_df.iloc[3, 0] == 1, "Fourth row should have duplicate ID 1"
 
 
-@pytest.mark.skip("Placeholder until full pipeline implemented")
+@pytest.mark.skip("Requires real PostgreSQL database - error logging tested in unit/contract tests")
 def test_partial_failure_error_log_details() -> None:
-    """Test that error log contains detailed constraint violation information."""
-    # TODO: Implement when error logging integration is added
-    # Should verify error log contains:
-    # - timestamp
-    # - file name (constraint_violation.xlsx)
-    # - sheet name (Customers)
-    # - error_type (CONSTRAINT_VIOLATION)
-    # - db_message with constraint details
+    """Test that error log contains detailed constraint violation information with real database.
+    
+    NOTE: This test requires a real PostgreSQL database to trigger actual constraint violations.
+    Error logging functionality is implemented and tested in unit tests and contract tests.
+    
+    Validates:
+    - timestamp (UTC ISO8601)
+    - file name (constraint_violation.xlsx)
+    - sheet name (Customers)
+    - error_type (CONSTRAINT_VIOLATION)
+    - db_message with constraint details
+    """
+    # TODO: Set up test DB with constraints, trigger violation, verify error log JSON
     pass
 
 
-@pytest.mark.skip("Placeholder until full pipeline implemented")
+@pytest.mark.skip("Requires real PostgreSQL database - transaction rollback tested in unit tests")
 def test_partial_failure_transaction_rollback() -> None:
-    """Test that failed file transaction is properly rolled back."""
-    # TODO: Implement when transaction handling is added
-    # Should verify that failed file's changes don't persist in database
+    """Test that failed file transaction is properly rolled back with real database.
+    
+    NOTE: This test requires a real PostgreSQL database to verify actual rollback behavior.
+    Transaction handling is implemented in the orchestrator and tested with mocked cursors.
+    """
+    # TODO: Set up test DB, trigger failure, verify no data persisted from failed file
     pass
 
 
-@pytest.mark.skip("Placeholder until full pipeline implemented")
+@pytest.mark.skip("Requires real PostgreSQL database - continuation logic tested in unit tests")
 def test_partial_failure_processing_continues() -> None:
-    """Test that processing continues after one file fails."""
-    # TODO: Implement when orchestration service handles continuation
-    # Should verify that failure of one file doesn't stop processing of remaining files
+    """Test that processing continues after one file fails with real database.
+    
+    NOTE: This test requires a real PostgreSQL database with multiple test files.
+    The orchestrator's continuation logic after failures is implemented and tested in unit tests.
+    """
+    # TODO: Set up test DB, run CLI with good + bad files, verify both processed independently
     pass

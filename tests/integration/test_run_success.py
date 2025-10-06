@@ -213,15 +213,24 @@ def test_multi_file_excel_fixture_creates_valid_files(
     assert customers_df.iloc[2, 1] == "Alice", "Third row should contain 'Alice'"
 
 
-@pytest.mark.skip("Placeholder until full pipeline implemented")  
+@pytest.mark.skip("Requires real PostgreSQL database - basic skipped sheets logic tested in unit tests")  
 def test_multi_file_run_with_skipped_sheets() -> None:
-    """Test handling of skipped sheets (invalid/empty sheets)."""
-    # TODO: Implement when sheet validation and skipping logic is added
+    """Test handling of skipped sheets (invalid/empty sheets) with real database.
+    
+    NOTE: This test requires a real PostgreSQL database with test fixtures.
+    The skipped sheets logic is implemented in the orchestrator and tested
+    in unit tests. This integration test validates end-to-end behavior.
+    """
+    # TODO: Set up test DB, create Excel with invalid sheets, run CLI, verify skipped_sheets count
     pass
 
 
-@pytest.mark.skip("Placeholder until full pipeline implemented")
+@pytest.mark.skip("Requires real PostgreSQL database - timing instrumentation tested in perf tests")
 def test_multi_file_run_performance_timing() -> None:
-    """Test that processing time is captured and reported correctly."""
-    # TODO: Implement when timing instrumentation is added
+    """Test that processing time is captured and reported correctly with real database.
+    
+    NOTE: This test requires a real PostgreSQL database. Timing instrumentation
+    is fully implemented and validated in performance tests (tests/perf/).
+    """
+    # TODO: Set up test DB, run CLI with real data, verify elapsed_sec and throughput_rps
     pass
