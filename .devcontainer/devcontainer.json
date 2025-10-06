@@ -31,6 +31,13 @@
 				// Ruff（Pythonのフォーマッタ）をインストール
 				// "charliermarsh.ruff"
 			]
+		},
+		"settings": {
+			"github.copilot.chat.commitMessageGeneration.instructions": [
+				{
+					"file": "./docs/commit_message.md"
+				}
+			]
 		}
 	}
 

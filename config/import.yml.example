@@ -1,0 +1,50 @@
+source_directory: ./data
+sheet_mappings:
+  tr_iwk_10500:
+    table: tr_iwk_10500
+    sequence_columns: [triwk10500_instance_id]
+    default_values:
+      triwk10500_hosoku: ""
+  tr_iwk_10510:
+    table: tr_iwk_10510
+    fk_propagation_columns: [triwk10510_instance_id]
+    default_values:
+      triwk10510_hosoku: ""
+      triwk10510_guidance: ""
+      triwk10510_mode: ""
+  tr_iwk_10520:
+    table: tr_iwk_10520
+    fk_propagation_columns: [triwk10520_instance_id]
+  tr_iwk_10530:
+    table: tr_iwk_10530
+    sequence_columns: [triwk10530_comment_no]
+    fk_propagation_columns: [triwk10530_instance_id]
+    default_values:
+      triwk10530_comment: ""
+  tr_iwk_10540:
+    table: tr_iwk_10540
+    fk_propagation_columns: [triwk10540_instance_id]
+  tr_iwk_21021:
+    table: tr_iwk_21021
+    fk_propagation_columns: [triwk21021_instance_id]
+sequences:
+  triwk10500_instance_id: triwk10500_instance_id
+fk_propagations:
+  - parent: tr_iwk_10500.triwk10500_instance_id
+    child:  tr_iwk_10510.triwk10510_instance_id
+  - parent: tr_iwk_10500.triwk10500_instance_id
+    child:  tr_iwk_10520.triwk10520_instance_id
+  - parent: tr_iwk_10500.triwk10500_instance_id
+    child:  tr_iwk_10530.triwk10530_instance_id
+  - parent: tr_iwk_10500.triwk10500_instance_id
+    child:  tr_iwk_10540.triwk10540_instance_id
+  - parent: tr_iwk_10500.triwk10500_instance_id
+    child:  tr_iwk_21021.triwk21021_instance_id
+timezone: JST
+# .envが優先される
+database:
+  host: localhost
+  port: 5432
+  user: postgres
+  password: ""
+  database: postgres
