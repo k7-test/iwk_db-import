@@ -113,8 +113,36 @@ def build_fk_propagation_maps(config: ImportConfig) -> list[FKPropagationMap]:
             return
         parent_table, parent_identifier = parent_ref.split(".", 1)
         child_table, child_fk_column = child_ref.split(".", 1)
-        # parent_pk_column 推定: sequences に parent_identifier が key として存在すればそれを PK とみなす
-        parent_pk_column = parent_identifier
+        # parent_pk_column 推定優先順位:
+        # 1. config が pk_columns 属性 (dict) を持つ場合その値
+        # 2. sequences に table.column 形式キーがあればその column 部分
+        # 3. sequences の値が dict で {column: <col>} 指定ならその列
+        # 4. 'id' 列が一般的デフォルトとして存在すると仮定し fallback 'id'
+        parent_pk_column = 'id'
+        # (1)
+        pk_cols = getattr(config, 'pk_columns', None)
+        if isinstance(pk_cols, dict) and parent_table in pk_cols:
+            parent_pk_column = pk_cols[parent_table]
+        else:
+            # (2) & (3)
+            seqs = getattr(config, 'sequences', {}) or {}
+            # 2: table.column キー探索
+            table_dot_prefix = f"{parent_table}."
+            for k, v in seqs.items():
+                if isinstance(k, str) and k.startswith(table_dot_prefix):
+                    _tbl, _col = k.split('.', 1)
+                    if _tbl == parent_table:
+                        parent_pk_column = _col
+                        break
+            else:  # no break
+                # 3: value が dict のケース
+                for v in seqs.values():
+                    if isinstance(v, dict):
+                        col_candidate = v.get('column')  # type: ignore[assignment]
+                        if isinstance(col_candidate, str):
+                            parent_pk_column = col_candidate
+                            break
+                # それでも特定できない場合 fallback 継続 ('id')
         maps.append(FKPropagationMap(
             parent_table=parent_table,
             parent_identifier_column=parent_identifier,

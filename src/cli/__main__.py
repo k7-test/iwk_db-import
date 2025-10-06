@@ -155,7 +155,11 @@ def main(argv: list[str] | None = None) -> int:
     # Initialize logging system with labeled prefixes
     logger = setup_logging()
     
-    argv = argv or sys.argv[1:]
+    # NOTE: 空リスト [] が与えられた場合 (テストで cli_main([]) 呼び出し) に
+    #       or 演算子で sys.argv[1:] が混入し pytest の -k/-q 等が誤解析される問題を回避。
+    #       None のときのみシステム引数を読む。
+    if argv is None:
+        argv = sys.argv[1:]
     args = _parse_args(argv)
     # .env を最優先で読み込む (DB 接続パラメータ優先順位保証)
     _load_env_file(Path('.env'), override=True)
@@ -184,24 +188,37 @@ def main(argv: list[str] | None = None) -> int:
     if args.inspect_data:
         return _inspect_data(cfg)
 
-    # DB 接続 (実接続) を試み、失敗ならフォールバック: mock モードで動かしつつ警告
+    # DB 接続制御: テスト等で完全に無効化したい場合 DISABLE_DB_CONNECT=1
+    disable_db = os.getenv("DISABLE_DB_CONNECT") == "1"
     cursor = None
     db_mode = "mock"
-    try:
-        with _db_connection(cfg) as cur:
-            db_mode = "live"
-            try:
-                result = process_all(cfg, cursor=cur)
-            except ProcessingError as e:
-                logger.error(f"processing: {e}")
-                return EXIT_FATAL
-    except Exception as db_e:
-        logger.warning(f"DB connection failed -> fallback to mock mode: {db_e}")
+    if disable_db:
+        logger.debug("DB connect disabled via DISABLE_DB_CONNECT=1 -> mock mode")
         try:
             result = process_all(cfg, cursor=None)
         except ProcessingError as e:
             logger.error(f"processing(mock): {e}")
             return EXIT_FATAL
+    else:
+        try:
+            with _db_connection(cfg) as cur:
+                db_mode = "live"
+                try:
+                    result = process_all(cfg, cursor=cur)
+                except ProcessingError as e:
+                    logger.error(f"processing: {e}")
+                    return EXIT_FATAL
+        except Exception as db_e:
+            # テストで警告抑制したい場合は SUPPRESS_DB_WARNING=1 を設定
+            if os.getenv("SUPPRESS_DB_WARNING") == "1":
+                logger.debug(f"DB connection failed (suppressed warn) -> fallback to mock mode: {db_e}")
+            else:
+                logger.warning(f"DB connection failed -> fallback to mock mode: {db_e}")
+            try:
+                result = process_all(cfg, cursor=None)
+            except ProcessingError as e:
+                logger.error(f"processing(mock): {e}")
+                return EXIT_FATAL
 
     logger.info(f"mode={db_mode} total_rows={result.total_inserted_rows}")
     

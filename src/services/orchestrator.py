@@ -525,7 +525,8 @@ def _process_single_sheet(
         sheet_data = normalize_sheet(
             df,
             sheet_name,
-            expected_columns=None,
+            # シートヘッダ検証: 現段階では default_values 列のみ必須 (T015 暫定)
+            expected_columns=sheet_mapping.expected_columns or None,
             default_values=sheet_mapping.default_values,
         )
         
@@ -646,18 +647,42 @@ def _process_single_sheet(
             # Build parent PK map if needed
             if do_returning and result.returned_values:
                 # 推定: sequences で親 PK 列名を推理 (列名→シーケンスの辞書なので key を列名扱い)
-                # もし複数候補なら最初を使用
-                candidate_pk_cols = []
-                for col, seq in raw_config.sequences.items():  # sequences は dict[str,str]
-                    # シンプル: シーケンス名が列名に関連している前提
-                    candidate_pk_cols.append(col)
-                pk_col_index = 0  # デフォルト
-                if candidate_pk_cols:
-                    # returned_values は SELECT * RETURNING の順 (テーブル定義順) 仮定 → 未解決
-                    # ここでは列順不明のため 0 固定、将来メタデータで解決予定
-                    pass
-                # 恒等マップ (値自体が PK 値とする)
-                parent_pk_lookup[table_name] = {rv[0]: rv[0] for rv in result.returned_values if rv}
+                # もし複数候補なら最初を使用 (複数 PK 未対応)
+                candidate_pk_cols: list[str] = []
+                for col in raw_config.sequences.keys():
+                    # sequences の key は列名想定
+                    if "." in col:
+                        # 旧形式で table.col の場合、現在テーブル名に一致するものを抽出
+                        t, c = col.split(".", 1)
+                        if t == table_name:
+                            candidate_pk_cols.append(c)
+                    else:
+                        candidate_pk_cols.append(col)
+
+                pk_col_index = 0  # fallback
+                detected = False
+                try:
+                    # psycopg2 の cursor.description から列順メタデータを取得し、候補列一致を探索
+                    if cursor is not None and getattr(cursor, "description", None):  # type: ignore[truthy-bool]
+                        col_names = [d[0] for d in cursor.description]  # type: ignore[index]
+                        for cand in candidate_pk_cols:
+                            if cand in col_names:
+                                pk_col_index = col_names.index(cand)
+                                detected = True
+                                break
+                except Exception:  # pragma: no cover
+                    logger.debug("could not inspect cursor.description for pk index", exc_info=True)
+
+                if not detected and candidate_pk_cols:
+                    # 候補はあるが description 無い場合は 0 のまま (戻り値位置依存)
+                    logger.debug(
+                        "pk column index fallback=0 table=%s candidates=%s", table_name, candidate_pk_cols
+                    )
+
+                # PK 値抽出 (rv[pk_col_index]) をキー・値ともに利用（現行ロジック互換: values() 列挙で順序使用）
+                parent_pk_lookup[table_name] = {
+                    rv[pk_col_index]: rv[pk_col_index] for rv in result.returned_values if rv and len(rv) > pk_col_index
+                }
                 processed_tables.add(table_name)
                 logger.debug(
                     "sheet=%s parent_pk_map_size=%d",
@@ -682,20 +707,19 @@ def _process_single_sheet(
         # fk_propagation_columns を insert_columns に含め、行値を parent_pk_lookup で置換してから実行する再設計が必要。
         # ここでは警告のみ出す。
         if sheet_mapping.fk_propagation_columns and cursor is not None and not do_returning:
+            # ここまでで do_returning=False は「子側想定」。既に親 PK マップ構築済みなら補完後に挿入されている。
+            # 先行ループで None 埋め補完を試行済みなのでここでは診断ログのみ残す。
             for fk_col in sheet_mapping.fk_propagation_columns:
-                found_parent = any(m.child_fk_column.endswith(f".{fk_col}") or m.child_fk_column == fk_col for m in fk_maps)
-                if not found_parent:
-                    logger.warning(
-                        "sheet=%s fk_col=%s has no parent mapping resolved yet (伝播未実装)",
-                        sheet_name,
-                        fk_col,
+                mapped = any(
+                    m.child_fk_column.endswith(f".{fk_col}") or m.child_fk_column == fk_col for m in fk_maps
+                )
+                if mapped:
+                    logger.debug(
+                        "sheet=%s fk_col=%s fk_propagation_applied_or_no_nulls", sheet_name, fk_col
                     )
                 else:
-                    logger.debug(
-                        "sheet=%s fk_col=%s parent_map_ready=%s",
-                        sheet_name,
-                        fk_col,
-                        fk_col in insert_columns,
+                    logger.warning(
+                        "sheet=%s fk_col=%s no fk_propagation mapping (config missing?)", sheet_name, fk_col
                     )
         
         return SheetProcess(
