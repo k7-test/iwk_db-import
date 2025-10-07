@@ -1,0 +1,7 @@
+# Ignore all log files generated at runtime
+*.log
+*.jsonl
+errors-*.log
+
+# Keep directory structure in git
+!.gitignore

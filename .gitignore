@@ -26,7 +26,14 @@ ENV/
 
 # ---- OS / Misc ----
 .DS_Store
-logs/
+
+# ---- Runtime logs (directory structure is tracked) ----
+logs/*.log
+logs/*.jsonl
+logs/errors-*
+
+# ---- Runtime config (template is tracked) ----
+config/import.yml
 
 # ---- Generated performance datasets ----
 # Avoid accidentally committing large datasets

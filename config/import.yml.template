@@ -1,0 +1,52 @@
+# Excel -> PostgreSQL Import Configuration Template
+# Copy this file to import.yml and customize for your environment
+
+# Directory containing Excel files to import
+source_directory: "./data"
+
+# Timezone for timestamp columns (default: UTC)
+timezone: "UTC"
+
+# Sheet name to database table mappings
+sheet_mappings:
+  # Example: Customer sheet -> customers table
+  Customers:
+    table: "customers"
+    # Columns with DB auto-generated values (sequences/IDENTITY)
+    # These columns will be ignored from Excel data
+    sequence_columns:
+      - "customer_id"
+    # Columns that receive values from parent table (FK propagation)
+    # These columns will be populated from parent records
+    fk_propagation_columns: []
+  
+  # Example: Orders sheet -> orders table with FK propagation
+  Orders:
+    table: "orders"
+    sequence_columns:
+      - "order_id"
+    fk_propagation_columns:
+      - "customer_id"  # Will be populated from Customers sheet
+
+# Sequence column to database sequence name mapping
+# Used for documentation and future optimization
+sequences:
+  customer_id: "customers_customer_id_seq"
+  order_id: "orders_order_id_seq"
+
+# Foreign key propagation mappings (parent_column -> child_column)
+# Defines how primary keys from parent sheets flow to child sheets
+fk_propagations:
+  customer_id: "customer_id"  # Customers.customer_id -> Orders.customer_id
+
+# Database connection settings
+# Note: Environment variables take precedence (FR-027)
+#   PG_HOST, PG_PORT, PG_USER, PG_PASSWORD, PG_DATABASE, PG_DSN
+database:
+  host: "localhost"
+  port: 5432
+  user: "postgres"
+  password: "password"
+  database: "import_db"
+  # Alternatively, use a connection string:
+  # dsn: "postgresql://user:pass@localhost:5432/dbname"

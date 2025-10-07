@@ -12,10 +12,8 @@ from ..models.config_models import SheetMappingConfig as DomainSheetMappingConfi
 from ..models.excel_file import ExcelFile, FileStatus
 from ..models.processing_result import FileStat, ProcessingResult
 from ..models.sheet_process import SheetProcess
+from .fk_propagation import needs_returning
 from .progress import ProgressTracker, SheetProgressIndicator
-
-# TODO: Add FK propagation service import for T023
-# from .fk_propagation import needs_returning, build_fk_propagation_maps, propagate_foreign_keys
 
 """Service orchestration for Excel -> PostgreSQL import tool.
 
@@ -428,12 +426,18 @@ def _process_single_sheet(
         # Perform batch insert
         if cursor is not None:
             # Real database insert
+            # Determine if RETURNING is needed based on FK propagation (R-007)
+            # For now, we don't track processed_tables in single-file context,
+            # so default to False. Full FK propagation will be implemented when
+            # multi-sheet parent-child processing is required.
+            use_returning = False  # Simplified for current implementation
+            
             result = batch_insert(
                 cursor=cursor,
                 table=sheet_mapping.table_name,
                 columns=insert_columns,
                 rows=insert_rows,
-                returning=False,  # TODO: Use fk_propagation.needs_returning() (T023)
+                returning=use_returning,
                 page_size=1000   # R-006 default batch size
             )
             inserted_rows = result.inserted_rows
