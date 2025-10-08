@@ -340,32 +340,30 @@ def _process_single_file(
     try:
         # Read Excel file
         raw_sheets = read_excel_file(file_path, target_sheets=set(sheet_mappings.keys()))
-        
+
         total_inserted_rows = 0
         skipped_sheets = 0
         sheet_processes: list[SheetProcess] = []
         file_failed = False
-        
-        # Count sheets that have mappings for progress tracking
-        mapped_sheets = [name for name in raw_sheets.keys() if name in sheet_mappings]
-        
+
+        # Count sheets (config順) that both have a mapping and exist in workbook
+        mapped_sheets = [name for name in sheet_mappings.keys() if name in raw_sheets]
+
         # Initialize sheet progress indicator (T030)
         sheet_progress = SheetProgressIndicator(
-            file_name=file_path.name, 
+            file_name=file_path.name,
             total_sheets=len(mapped_sheets)
         )
         
-        # Process each sheet that has a mapping
-        for sheet_name, df in raw_sheets.items():
-            if sheet_name not in sheet_mappings:
+        # Process in config (dict insertion) order
+        for sheet_name, sheet_mapping in sheet_mappings.items():
+            # 物理シートに存在しない場合はスキップ (mapped_sheets 集計対象外なので skipped_sheets++)
+            if sheet_name not in raw_sheets:
                 skipped_sheets += 1
                 continue
-            
-            sheet_mapping = sheet_mappings[sheet_name]
-            
-            # Start sheet processing
+            df = raw_sheets[sheet_name]
+            # Start sheet processing (progress uses only existing mapped sheets count)
             sheet_progress.start_sheet(sheet_name)
-            
             sheet_result = _process_single_sheet(
                 sheet_name,
                 df,
