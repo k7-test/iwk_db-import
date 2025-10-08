@@ -27,6 +27,39 @@ sheet_mappings:
   tr_iwk_21021:
     table: tr_iwk_21021
     fk_propagation_columns: [triwk21021_instance_id]
+  tr_iwp_50900_プロジェクトフォルダ申請:
+    table: tr_iwp_50900
+    fk_propagation_columns: [triwp50900_instance_id]
+    default_values:
+      "triwp50900_prj_capacity": 0
+      "triwp50900_prj_reason": ""
+      "triwp50900_prj_final_cap": 0
+      "triwp50900_term_to": 0001-01-01
+      "triwp50900_serial_no": ""
+      "triwp50900_prj_code": ""
+      "triwp50900_member_grp_1": ""
+      "triwp50900_member_grp_2": ""
+      "triwp50900_member_grp_3": ""
+      "triwp50900_member_grp_4": ""
+      "triwp50900_operator": ""
+      "triwp50900_data_overview": ""
+      "triwp50900_quota_chg_reason": ""
+      "triwp50900_option_grp_1": ""
+      "triwp50900_op_grp_use_1": false
+      "triwp50900_option_grp_2": ""
+      "triwp50900_op_grp_use_2": false
+      "triwp50900_option_grp_3": ""
+      "triwp50900_op_grp_use_3": false
+      "triwp50900_option_grp_4": ""
+      "triwp50900_op_grp_use_4": false
+      "triwp50900_option_grp_5": ""
+      "triwp50900_op_grp_use_5": false
+      "triwp50900_from_itis": ""
+  tr_iwp_50900_管理者リスト:
+    table: tr_iwp_50900triwp50900_prj_manager_list
+    fk_propagation_columns: [triwp50900_instance_id]
+    default_values:
+      "triwp50900_manager_mail_address": ""
 sequences:
   triwk10500_instance_id: triwk10500_instance_id
 fk_propagations:
@@ -40,8 +73,14 @@ fk_propagations:
     child:  tr_iwk_10540.triwk10540_instance_id
   - parent: tr_iwk_10500.triwk10500_instance_id
     child:  tr_iwk_21021.triwk21021_instance_id
+  - parent: tr_iwk_10500.triwk10500_instance_id
+    child:  tr_iwp_50900.triwp50900_instance_id
 timezone: JST
-# .envが優先される
+null_sentinels:
+  - "« NULL »"
+  - "NULL"
+  - "(NULL)"
+# .envが優先されるためダミー
 database:
   host: localhost
   port: 5432

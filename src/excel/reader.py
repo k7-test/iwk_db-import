@@ -54,6 +54,7 @@ def normalize_sheet(
     sheet_name: str,
     expected_columns: set[str] | None = None,
     default_values: dict[str, Any] | None = None,
+    null_sentinels: set[str] | None = None,
 ) -> SheetData:
     """Normalize a raw DataFrame using second row as header.
 
@@ -82,9 +83,15 @@ def normalize_sheet(
                 else:
                     row_dict[col] = None
             else:
-                # 空文字 / ホワイトスペースのみも default_values 適用対象
-                if isinstance(val, str) and val.strip() == "":
-                    if default_values and col in default_values:
+                if isinstance(val, str):
+                    stripped = val.strip()
+                    upper = stripped.upper()
+                    # NULL サニタイズ
+                    if null_sentinels and upper in null_sentinels:
+                        row_dict[col] = None
+                        continue
+                    # 空文字 / ホワイトスペースのみ -> default
+                    if stripped == "" and default_values and col in default_values:
                         row_dict[col] = default_values[col]
                         continue
                 row_dict[col] = val

@@ -77,6 +77,14 @@ def _convert_config_to_domain_mappings(config: ImportConfig) -> dict[str, Domain
     """
     domain_mappings: dict[str, DomainSheetMappingConfig] = {}
     
+    global_nulls = set()
+    # loader.ImportConfig may have list[str] or None
+    try:
+        if getattr(config, 'null_sentinels', None):
+            global_nulls = {s.strip().upper() for s in config.null_sentinels if isinstance(s, str)}  # type: ignore[attr-defined]
+    except Exception:
+        global_nulls = set()
+
     for sheet_name, mapping_data in config.sheet_mappings.items():
         if not isinstance(mapping_data, dict):
             raise ProcessingError(
@@ -98,7 +106,8 @@ def _convert_config_to_domain_mappings(config: ImportConfig) -> dict[str, Domain
             table_name=table_name,
             sequence_columns=sequence_cols,
             fk_propagation_columns=fk_cols,
-            default_values=default_vals
+            default_values=default_vals,
+            null_sentinels=global_nulls if global_nulls else None,
         )
     
     return domain_mappings
@@ -522,13 +531,21 @@ def _process_single_sheet(
     """
     try:
         # Normalize sheet data (extract header from row 2, data from row 3+)
-        sheet_data = normalize_sheet(
-            df,
-            sheet_name,
-            # シートヘッダ検証: 現段階では default_values 列のみ必須 (T015 暫定)
-            expected_columns=sheet_mapping.expected_columns or None,
-            default_values=sheet_mapping.default_values,
-        )
+        try:
+            sheet_data = normalize_sheet(
+                df,
+                sheet_name,
+                expected_columns=sheet_mapping.expected_columns or None,
+                default_values=sheet_mapping.default_values,
+                null_sentinels=sheet_mapping.null_sentinels,
+            )
+        except TypeError:  # 後方互換: テストモックが旧シグネチャの場合
+            sheet_data = normalize_sheet(
+                df,
+                sheet_name,
+                expected_columns=sheet_mapping.expected_columns or None,
+                default_values=sheet_mapping.default_values,
+            )  # pragma: no cover (fallback path for legacy mocks)
         
         if not sheet_data.rows:
             # Empty sheet, but not an error

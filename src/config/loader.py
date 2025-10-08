@@ -56,6 +56,7 @@ class ImportConfig:
     fk_propagations: Any  # dict[str,str] 旧形式 or list[{parent,child}] 新形式
     timezone: str
     database: DatabaseConfig
+    null_sentinels: list[str] | None = None
 
 
 def _validate_config_schema(data: dict[str, Any]) -> None:
@@ -115,4 +116,5 @@ def load_config(path: Path) -> ImportConfig:
         fk_propagations=data["fk_propagations"],  # 形式は後段サービスで解釈
         timezone=tz,
         database=db,
+        null_sentinels=data.get("null_sentinels"),
     )

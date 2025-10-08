@@ -16,6 +16,11 @@
       "type": "string",
       "description": "Excelファイル探索ディレクトリ (存在必須)"
     },
+    "null_sentinels": {
+      "type": "array",
+      "description": "文字列セルを NULL とみなす値一覧 (大小区別なし, trim 後比較)",
+      "items": { "type": "string" }
+    },
     "sheet_mappings": {
       "type": "object",
       "description": "シート名→テーブル名マッピング",

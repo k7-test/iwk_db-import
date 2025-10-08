@@ -64,7 +64,7 @@ def needs_returning(
     """
     # Check if any child tables reference this table's PK
     fp = config.fk_propagations
-    # list 新形式
+    # list 新形式: 子テーブルがまだ processed_tables に含まれていなければ True
     if isinstance(fp, list):
         for entry in fp:
             try:
@@ -80,16 +80,15 @@ def needs_returning(
             child_table, _ = child_ref.split(".", 1)
             if child_table not in processed_tables:
                 return True
-    # 旧 dict 形式
+    # 旧 dict 形式: 同様に child 側が未処理なら True
     elif isinstance(fp, dict):
         for fk_mapping_key, child_reference in fp.items():
             if "." in fk_mapping_key:
                 parent_table, _ = fk_mapping_key.split(".", 1)
-                if parent_table == table_name:
-                    if "." in child_reference:
-                        child_table, _ = child_reference.split(".", 1)
-                        if child_table not in processed_tables:
-                            return True
+                if parent_table == table_name and "." in child_reference:
+                    child_table, _ = child_reference.split(".", 1)
+                    if child_table not in processed_tables:
+                        return True
     
     return False
 

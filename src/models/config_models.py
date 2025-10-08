@@ -40,6 +40,7 @@ class SheetMappingConfig:
     sequence_columns: set[str]  # Columns with auto-generated values (ignore Excel values)
     fk_propagation_columns: set[str]  # Columns that get values from parent records
     default_values: dict[str, object] | None = None  # 空セル時適用デフォルト
+    null_sentinels: set[str] | None = None  # 文字列→NULL 変換対象 (大文字化済想定)
     
     @property
     def expected_columns(self) -> set[str]:
@@ -75,3 +76,4 @@ class ImportConfig:
     fk_propagations: dict[str, str]  # Parent column -> child column mapping
     timezone: str  # Timezone for datetime processing (default: "UTC")
     database: DatabaseConfig  # Database connection fallback configuration
+    null_sentinels: set[str] | None = None  # グローバルNULLサニタイズ文字列集合

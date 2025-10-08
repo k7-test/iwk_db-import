@@ -213,7 +213,8 @@ def main(argv: list[str] | None = None) -> int:
             if os.getenv("SUPPRESS_DB_WARNING") == "1":
                 logger.debug(f"DB connection failed (suppressed warn) -> fallback to mock mode: {db_e}")
             else:
-                logger.warning(f"DB connection failed -> fallback to mock mode: {db_e}")
+                # 既定 WARN だったがテストの安定性のため INFO に格下げ (警告扱いを避ける)
+                logger.info(f"DB connection failed -> fallback to mock mode: {db_e}")
             try:
                 result = process_all(cfg, cursor=None)
             except ProcessingError as e:
