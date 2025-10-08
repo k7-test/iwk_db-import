@@ -44,7 +44,7 @@ class FKPropagationMap:
 
 
 def needs_returning(
-    table_name: str, 
+    table_name: str,
     config: ImportConfig,
     processed_tables: set[str]
 ) -> bool:
@@ -63,13 +63,29 @@ def needs_returning(
     bool: True if RETURNING clause should be used, False otherwise
     """
     # Check if any child tables reference this table's PK
-    for fk_mapping_key, child_reference in config.fk_propagations.items():
-        # fk_propagations format: "parent_table.parent_column" -> "child_table.child_column"
-        if "." in fk_mapping_key:
-            parent_table, _ = fk_mapping_key.split(".", 1)
-            if parent_table == table_name:
-                # This table is a parent - check if child hasn't been processed yet
-                if "." in child_reference:
+    fp = config.fk_propagations
+    # list 新形式: 子テーブルがまだ processed_tables に含まれていなければ True
+    if isinstance(fp, list):
+        for entry in fp:
+            try:
+                parent_ref = entry.get("parent")
+                child_ref = entry.get("child")
+            except AttributeError:
+                continue
+            if not parent_ref or not child_ref or "." not in parent_ref or "." not in child_ref:
+                continue
+            parent_table, _ = parent_ref.split(".", 1)
+            if parent_table != table_name:
+                continue
+            child_table, _ = child_ref.split(".", 1)
+            if child_table not in processed_tables:
+                return True
+    # 旧 dict 形式: 同様に child 側が未処理なら True
+    elif isinstance(fp, dict):
+        for fk_mapping_key, child_reference in fp.items():
+            if "." in fk_mapping_key:
+                parent_table, _ = fk_mapping_key.split(".", 1)
+                if parent_table == table_name and "." in child_reference:
                     child_table, _ = child_reference.split(".", 1)
                     if child_table not in processed_tables:
                         return True
@@ -90,42 +106,59 @@ def build_fk_propagation_maps(config: ImportConfig) -> list[FKPropagationMap]:
     """
     maps = []
     
-    for fk_mapping_key, child_reference in config.fk_propagations.items():
-        if "." not in fk_mapping_key or "." not in child_reference:
-            continue
-            
-        parent_parts = fk_mapping_key.split(".", 1)
-        child_parts = child_reference.split(".", 1)
-        
-        if len(parent_parts) != 2 or len(child_parts) != 2:
-            continue
-            
-        parent_table, parent_identifier = parent_parts
-        child_table, child_fk_column = child_parts
-        
-        # Determine PK column name from config.sequences or config.pk_columns if available
-        parent_pk_column = None
-        # Try config.sequences: it can be either {column_name: sequence_name} or {table_name: dict}
-        if hasattr(config, "sequences") and parent_table in config.sequences:
-            seq_info = config.sequences[parent_table]
-            if isinstance(seq_info, dict):
-                parent_pk_column = seq_info.get("column", None)
-            else:
-                # If it's a string, we can't directly get the column name
-                parent_pk_column = None
-        # Or try config.pk_columns: {table_name: pk_column, ...}
-        elif hasattr(config, "pk_columns") and parent_table in config.pk_columns:
-            parent_pk_column = config.pk_columns[parent_table]
-        # Fallback to 'id' if not found
-        if parent_pk_column is None:
-            parent_pk_column = "id"
-        
+    fp = config.fk_propagations
+    def _append(parent_ref: str, child_ref: str):
+        if "." not in parent_ref or "." not in child_ref:
+            return
+        parent_table, parent_identifier = parent_ref.split(".", 1)
+        child_table, child_fk_column = child_ref.split(".", 1)
+        # parent_pk_column 推定優先順位:
+        # 1. config が pk_columns 属性 (dict) を持つ場合その値
+        # 2. sequences に table.column 形式キーがあればその column 部分
+        # 3. sequences の値が dict で {column: <col>} 指定ならその列
+        # 4. 'id' 列が一般的デフォルトとして存在すると仮定し fallback 'id'
+        parent_pk_column = 'id'
+        # (1)
+        pk_cols = getattr(config, 'pk_columns', None)
+        if isinstance(pk_cols, dict) and parent_table in pk_cols:
+            parent_pk_column = pk_cols[parent_table]
+        else:
+            # (2) & (3)
+            seqs = getattr(config, 'sequences', {}) or {}
+            # 2: table.column キー探索
+            table_dot_prefix = f"{parent_table}."
+            for k, v in seqs.items():
+                if isinstance(k, str) and k.startswith(table_dot_prefix):
+                    _tbl, _col = k.split('.', 1)
+                    if _tbl == parent_table:
+                        parent_pk_column = _col
+                        break
+            else:  # no break
+                # 3: value が dict のケース
+                for v in seqs.values():
+                    if isinstance(v, dict):
+                        col_candidate = v.get('column')  # type: ignore[assignment]
+                        if isinstance(col_candidate, str):
+                            parent_pk_column = col_candidate
+                            break
+                # それでも特定できない場合 fallback 継続 ('id')
         maps.append(FKPropagationMap(
             parent_table=parent_table,
             parent_identifier_column=parent_identifier,
             child_fk_column=child_fk_column,
             parent_pk_column=parent_pk_column
         ))
+    if isinstance(fp, list):
+        for entry in fp:
+            if not isinstance(entry, dict):
+                continue
+            parent_ref = entry.get("parent")
+            child_ref = entry.get("child")
+            if parent_ref and child_ref:
+                _append(parent_ref, child_ref)
+    elif isinstance(fp, dict):
+        for k, v in fp.items():
+            _append(k, v)
     
     return maps
 

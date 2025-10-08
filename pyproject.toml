@@ -16,8 +16,16 @@ dependencies = [
   "psycopg2-binary>=2.9.9",
   "PyYAML>=6.0.1",
   "tqdm>=4.66.0",
-  "jsonschema>=4.22.0"
+  "jsonschema>=4.22.0",
+  "python-dotenv>=1.0.0"
 ]
+
+[tool.setuptools]
+package-dir = {"" = "."}
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*" ]
 
 [project.optional-dependencies]
 dev = [

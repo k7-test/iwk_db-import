@@ -256,3 +256,100 @@ def test_process_all_directory_scanning_error(temp_workdir: Path, sample_config_
     
     with pytest.raises(ProcessingError, match="Directory not found"):
         process_all(config, cursor=None)
+
+
+def test_process_single_file_with_parent_returning_and_child_fk_propagation(temp_workdir: Path, write_config: Path) -> None:
+    """Test parent table processed with RETURNING and child table without.
+
+    Scenario:
+      - Parent sheet requires RETURNING because child depends on its PK.
+      - sequences に parent PK 情報 (table.col 形式) を与え、cursor.description を利用して PK インデックス推定を通過。
+      - batch_insert は parent で returning=True, child で returning=False で呼ばれる。
+    """
+    from src.config.loader import load_config
+    from src.models.processing_result import ProcessingResult
+    from src.services.orchestrator import process_all
+    from src.db.batch_insert import InsertResult
+    import types
+    from unittest.mock import patch, MagicMock
+
+    # 元の config 読み込み後に FK 設定 / sequences を上書き
+    config = load_config(write_config)
+    # 既存シートマッピングに Parent / Child を追加 (簡易)
+    # loader が返す形に合わせ dict で追加 (SheetMappingConfig ではなく)
+    config.sheet_mappings['Parents'] = {
+        'table': 'parents',
+        'sequence_columns': ['id'],
+        'fk_propagation_columns': [],
+        'default_values': None,
+    }
+    config.sheet_mappings['Children'] = {
+        'table': 'children',
+        'sequence_columns': ['id'],
+        'fk_propagation_columns': ['parent_id'],
+        'default_values': None,
+    }
+    # sequences: 親 PK を table.col 形式で登録
+    config.sequences['parents.id'] = 'parents_id_seq'
+    # FK 伝播設定: parents.name -> children.parent_id (identifier name, fk 列 parent_id)
+    config.fk_propagations['parents.name'] = 'children.parent_id'
+
+    data_dir = temp_workdir / 'data'
+    (data_dir / 'parents.xlsx').write_bytes(b"test")
+    (data_dir / 'children.xlsx').write_bytes(b"test")
+
+    # モック DataFrame 正規化後オブジェクト (normalize_sheet 戻り値互換)
+    parent_sheet = MagicMock()
+    parent_sheet.columns = ['id', 'name']
+    parent_sheet.rows = [
+        {'id': None, 'name': 'Alice'},
+        {'id': None, 'name': 'Bob'},
+    ]
+    child_sheet = MagicMock()
+    child_sheet.columns = ['id', 'parent_id', 'value']
+    child_sheet.rows = [
+        {'id': None, 'parent_id': None, 'value': 10},
+        {'id': None, 'parent_id': None, 'value': 11},
+    ]
+
+    # read_excel_file: ファイル別にシート名→ダミー DataFrame (後で normalize で置換)
+    def mock_read_side_effect(path, target_sheets=None):
+        if 'parents' in str(path):
+            return {'Parents': MagicMock()}
+        return {'Children': MagicMock()}
+
+    # batch_insert 振る舞い: parent で returning, child で non-returning を記録
+    parent_returned = [(1, 'Alice'), (2, 'Bob')]
+    inserted_calls: list[tuple] = []
+
+    def mock_batch_insert(cursor, table, columns, rows, returning=False, page_size=1000, metrics_callback=None):  # noqa: D401
+        inserted_calls.append((table, returning, list(rows)))
+        if returning:
+            return InsertResult(inserted_rows=len(rows), returned_values=parent_returned)
+        return InsertResult(inserted_rows=len(rows), returned_values=None)
+
+    # cursor モック: description で列名提供
+    mock_cursor = MagicMock()
+    mock_cursor.execute.return_value = None
+    # parent RETURNING の後 fetchall() を呼ばれるので side_effect ではなく batch_insert 内で処理済ため不要
+    # description を parent の RETURNING * 結果想定列順 ['id','name'] に設定
+    mock_cursor.description = [('id',), ('name',)]
+
+    with patch('src.services.orchestrator.read_excel_file') as mock_read, \
+         patch('src.services.orchestrator.normalize_sheet') as mock_norm, \
+         patch('src.services.orchestrator.batch_insert', side_effect=mock_batch_insert):
+        mock_read.side_effect = mock_read_side_effect
+        # Parents → Children の順に normalize 呼び出し (ファイル列挙順依存). Return appropriate object by sheet name param.
+        def norm_side_effect(df, sheet_name, expected_columns=None, default_values=None):
+            return parent_sheet if sheet_name == 'Parents' else child_sheet
+        mock_norm.side_effect = norm_side_effect
+
+        result = process_all(config, cursor=mock_cursor)
+
+    # 検証: parent returning=True, child returning=False
+    assert any(t == 'parents' and r is True for t, r, _ in inserted_calls)
+    assert any(t == 'children' and r is False for t, r, _ in inserted_calls)
+    # 成功数 2
+    assert result.success_files == 2
+    # 親マップ由来で children も 2 行挿入
+    assert result.total_inserted_rows == 4

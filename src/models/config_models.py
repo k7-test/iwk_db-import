@@ -39,6 +39,8 @@ class SheetMappingConfig:
     table_name: str  # Target database table name
     sequence_columns: set[str]  # Columns with auto-generated values (ignore Excel values)
     fk_propagation_columns: set[str]  # Columns that get values from parent records
+    default_values: dict[str, object] | None = None  # 空セル時適用デフォルト
+    null_sentinels: set[str] | None = None  # 文字列→NULL 変換対象 (大文字化済想定)
     
     @property
     def expected_columns(self) -> set[str]:
@@ -47,11 +49,19 @@ class SheetMappingConfig:
         These are all columns except those that are auto-generated or propagated.
         Used for validating that required columns are present in the Excel file.
         """
-        # In the initial implementation, we don't have a full column list
-        # This property will be more meaningful when we have complete table schema info
-        # For now, it returns an empty set as a placeholder
-        # TODO(T015): Implement expected_columns logic when table schema is available
-        return set()
+        # 暫定実装 (T015 改訂):
+        #  - default_values 指定列: 補完対象なのでヘッダに存在している必要がある
+        #  - fk_propagation_columns: 親 PK 伝播で後から値を埋めるが、
+        #    現行設計では normalize_sheet 時点で列欠落を検知したいので必須集合に含める
+        #  - sequence_columns: Excel の値を無視するため必須には含めない
+        # 将来 (schema introspection 導入後):
+        #  全テーブル列集合 (table_columns) - sequence_columns を最初の候補とし、
+        #  オプションで fk_propagation_columns を含む/除外をモード化可能。
+        required = set()
+        if self.default_values:
+            required.update(self.default_values.keys())
+        required.update(self.fk_propagation_columns)
+        return required
 
 
 @dataclass(frozen=True)
@@ -66,3 +76,4 @@ class ImportConfig:
     fk_propagations: dict[str, str]  # Parent column -> child column mapping
     timezone: str  # Timezone for datetime processing (default: "UTC")
     database: DatabaseConfig  # Database connection fallback configuration
+    null_sentinels: set[str] | None = None  # グローバルNULLサニタイズ文字列集合

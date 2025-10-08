@@ -53,9 +53,10 @@ class ImportConfig:
     source_directory: str
     sheet_mappings: dict[str, Any]
     sequences: dict[str, str]
-    fk_propagations: dict[str, str]
+    fk_propagations: Any  # dict[str,str] 旧形式 or list[{parent,child}] 新形式
     timezone: str
     database: DatabaseConfig
+    null_sentinels: list[str] | None = None
 
 
 def _validate_config_schema(data: dict[str, Any]) -> None:
@@ -112,7 +113,8 @@ def load_config(path: Path) -> ImportConfig:
         source_directory=data["source_directory"],
         sheet_mappings=data["sheet_mappings"],
         sequences=data["sequences"],
-        fk_propagations=data["fk_propagations"],
+        fk_propagations=data["fk_propagations"],  # 形式は後段サービスで解釈
         timezone=tz,
         database=db,
+        null_sentinels=data.get("null_sentinels"),
     )
