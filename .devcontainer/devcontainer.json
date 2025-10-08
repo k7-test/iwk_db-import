@@ -30,17 +30,28 @@
 				"bierner.markdown-mermaid"
 				// Ruff（Pythonのフォーマッタ）をインストール
 				// "charliermarsh.ruff"
-			]
-		},
-		"settings": {
-			"github.copilot.chat.commitMessageGeneration.instructions": [
-				{
-					"file": "./docs/commit_message.md"
+			],
+			"settings": {
+				"python.analysis.extraPaths": [
+					"./.venv/lib/python3.13/site-packages"
+				],
+				"github.copilot.chat.commitMessageGeneration.instructions": [
+					{
+						"file": "./docs/commit-message.md"
+					}
+				]
+			},
+			"mcp": {
+				"servers": {
+        			"postgres-mcp-server": {
+            			"command": "npx",
+						"args": ["-y", "@henkey/postgres-mcp-server"],
+						"envFile": "${workspaceFolder}/.env"
+					}
 				}
-			]
+			}
 		}
 	}
-
 	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
 	// "remoteUser": "root"
 }
