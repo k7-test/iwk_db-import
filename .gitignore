@@ -24,8 +24,6 @@ ENV/
 .vscode/
 .idea/
 
-!.vscode/mcp.json
-
 # ---- OS / Misc ----
 .DS_Store
 logs/
