@@ -11,6 +11,7 @@ This document records the finalized decisions referenced by the Constitution (de
 | R-005 | Error Log Flush | In‑memory list → flush once per file (finally) | Simplicity; worst-case memory ~8MB at 50k errors manageable | FR-030, QR-009 | Error volume >> estimates / memory pressure |
 | R-006 | Batch Size | Default 1000 rows | Balance network round trips vs memory; practical literature baseline | QR-004/005 | Perf profiling suggests alternative superior |
 | R-007 | RETURNING Usage | Only when FK propagation requires parent PK | Minimizes round-trip & result materialization | FR-029 | Multi-parent dependency or child needs additional generated columns |
+| R-008 | Config Validation | Adopt jsonschema for runtime config validation | Align with contracts/config_schema.yaml; low complexity implementation | FR-026 | Schema version bump |
 
 ## Traceability
 - Source: `research.md` (detailed alternatives & rationale)

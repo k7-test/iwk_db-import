@@ -1,9 +1,11 @@
 from __future__ import annotations
+
+import time
+
 """Performance smoke test scaffold (QR-004, QR-005, QR-006).
 Currently a placeholder verifying we can later plug timing logic.
 """
-import time
-import math
+
 
 def test_perf_placeholder():
     start = time.perf_counter()

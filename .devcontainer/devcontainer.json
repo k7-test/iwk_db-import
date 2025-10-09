@@ -5,7 +5,8 @@
 	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
 	"image": "mcr.microsoft.com/devcontainers/python:3.13-bullseye",
 	"features": {
-		"ghcr.io/va-h/devcontainers-features/uv:1": {}
+		"ghcr.io/va-h/devcontainers-features/uv:1": {},
+		"ghcr.io/devcontainers/features/node": {}
 	},
 
 	// Features to add to the dev container. More info: https://containers.dev/features.
@@ -29,10 +30,28 @@
 				"bierner.markdown-mermaid"
 				// Ruff（Pythonのフォーマッタ）をインストール
 				// "charliermarsh.ruff"
-			]
+			],
+			"settings": {
+				"python.analysis.extraPaths": [
+					"./.venv/lib/python3.13/site-packages"
+				],
+				"github.copilot.chat.commitMessageGeneration.instructions": [
+					{
+						"file": "./docs/commit-message.md"
+					}
+				]
+			},
+			"mcp": {
+				"servers": {
+        			"postgres-mcp-server": {
+            			"command": "npx",
+						"args": ["-y", "@henkey/postgres-mcp-server"],
+						"envFile": "${workspaceFolder}/.env"
+					}
+				}
+			}
 		}
 	}
-
 	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
 	// "remoteUser": "root"
 }

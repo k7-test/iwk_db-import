@@ -1,14 +1,16 @@
 from __future__ import annotations
-"""Error log JSON schema contract test (FR-030)."""
+
 import json
 import pathlib
 
 import pytest
 
+"""Error log JSON schema contract test (FR-030)."""
+
 try:
-    import jsonschema  # type: ignore
+    import jsonschema
 except ImportError:  # pragma: no cover
-    jsonschema = None  # type: ignore
+    jsonschema = None
 
 SCHEMA_PATH = pathlib.Path("specs/001-excel-postgressql-excel/contracts/error_log_schema.json")
 
@@ -37,5 +39,5 @@ def test_error_log_schema_rejects_extra_key():
         "db_message": "duplicate key value violates unique constraint 'orders_pkey'",
         "extra": "not allowed"
     }
-    with pytest.raises(Exception):  # jsonschema.exceptions.ValidationError
-        jsonschema.validate(record, schema)  # type: ignore
+    with pytest.raises(jsonschema.exceptions.ValidationError):
+        jsonschema.validate(record, schema)

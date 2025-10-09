@@ -1,4 +1,12 @@
 from __future__ import annotations
+
+from collections.abc import Iterable
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+
+import pandas as pd
+
 """Excel reader scaffolding (Phase 1).
 
 FR-004: 2行目をヘッダ行として扱い、3行目以降をデータ行。
@@ -6,10 +14,7 @@ FR-016: 設定で期待される列が欠落した場合はファイルエラー
 
 現段階では pandas を利用し、後続でメモリ最適化/downcast 等を実装予定。
 """
-from dataclasses import dataclass
-from pathlib import Path
-from typing import Any, Iterable
-import pandas as pd
+
 
 class SheetHeaderError(Exception):
     """Raised when header row (2nd line) is missing or invalid."""
@@ -24,7 +29,9 @@ class SheetData:
     rows: list[dict[str, Any]]  # 正規化済 (列名→値)
 
 
-def read_excel_file(path: Path, target_sheets: Iterable[str] | None = None) -> dict[str, pd.DataFrame]:
+def read_excel_file(
+    path: Path, target_sheets: Iterable[str] | None = None
+) -> dict[str, pd.DataFrame]:
     """Read an Excel file returning raw DataFrames keyed by sheet name.
 
     Parameters
@@ -35,14 +42,20 @@ def read_excel_file(path: Path, target_sheets: Iterable[str] | None = None) -> d
     dfs: dict[str, pd.DataFrame] = {}
     xls = pd.ExcelFile(path)
     for name in xls.sheet_names:
-        if target_sheets is not None and name not in target_sheets:
+        if target_sheets is not None and str(name) not in target_sheets:
             continue
         df = xls.parse(name, header=None)  # ヘッダなしで生読み (後で2行目をヘッダとして適用)
-        dfs[name] = df
+        dfs[str(name)] = df
     return dfs
 
 
-def normalize_sheet(df: pd.DataFrame, sheet_name: str, expected_columns: set[str] | None = None) -> SheetData:
+def normalize_sheet(
+    df: pd.DataFrame,
+    sheet_name: str,
+    expected_columns: set[str] | None = None,
+    default_values: dict[str, Any] | None = None,
+    null_sentinels: set[str] | None = None,
+) -> SheetData:
     """Normalize a raw DataFrame using second row as header.
 
     Steps:
@@ -63,10 +76,24 @@ def normalize_sheet(df: pd.DataFrame, sheet_name: str, expected_columns: set[str
         if raw.isna().all():
             continue
         row_dict: dict[str, Any] = {}
-        for col, val in zip(columns, raw.tolist()):
+        for col, val in zip(columns, raw.tolist(), strict=False):
             if pd.isna(val):
-                row_dict[col] = None
+                if default_values and col in default_values:
+                    row_dict[col] = default_values[col]
+                else:
+                    row_dict[col] = None
             else:
+                if isinstance(val, str):
+                    stripped = val.strip()
+                    upper = stripped.upper()
+                    # NULL サニタイズ
+                    if null_sentinels and upper in null_sentinels:
+                        row_dict[col] = None
+                        continue
+                    # 空文字 / ホワイトスペースのみ -> default
+                    if stripped == "" and default_values and col in default_values:
+                        row_dict[col] = default_values[col]
+                        continue
                 row_dict[col] = val
         rows.append(row_dict)
 

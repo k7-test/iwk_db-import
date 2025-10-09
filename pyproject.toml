@@ -15,8 +15,17 @@ dependencies = [
   "openpyxl>=3.1.0",
   "psycopg2-binary>=2.9.9",
   "PyYAML>=6.0.1",
-  "tqdm>=4.66.0"
+  "tqdm>=4.66.0",
+  "jsonschema>=4.22.0",
+  "python-dotenv>=1.0.0"
 ]
+
+[tool.setuptools]
+package-dir = {"" = "."}
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*" ]
 
 [project.optional-dependencies]
 dev = [
@@ -26,15 +35,22 @@ dev = [
   "mypy>=1.10.0",
   "types-PyYAML",
   "types-psycopg2",
-  "jsonschema>=4.22.0"
+  "types-tqdm",
+  "pandas-stubs",
+  "types-jsonschema"
 ]
 
 [tool.pytest.ini_options]
 addopts = "-q --cov=src --cov-report=term-missing --cov-fail-under=90"
 python_files = "test_*.py"
+markers = [
+    "smoke: marks tests as smoke tests (fast subset for CI)",
+]
 
 [tool.ruff]
 line-length = 100
+
+[tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "A"]
 
 [tool.mypy]

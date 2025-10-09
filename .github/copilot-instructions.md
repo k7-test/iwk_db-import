@@ -23,7 +23,7 @@ Feature: Excel -> PostgreSQL bulk import CLI (Branch `001-excel-postgressql-exce
 | R-006 | Default batch size 1000 |
 | R-007 | RETURNING only when FK propagation required |
 
-## Current Implementation Status (Post Phase 1)
+## Current Implementation Status (Post Phase 3.3)
 Implemented scaffolds:
 - Config loader (`src/config/loader.py`) basic required key validation + default timezone.
 - Error log buffer & `ErrorRecord` (JSON serialization) (`src/logging/error_log.py`).
@@ -33,22 +33,34 @@ Implemented scaffolds:
 - Contract tests: exit codes (partial), summary regex, error log schema.
 - Perf smoke placeholder.
 
-Pending (Phase 2 tasks):
-1. Orchestration service layer (file scan → sheet normalization → DB insert → metrics → error flush).
+Implemented domain models:
+- Config models (`src/models/config_models.py`) domain dataclasses for ImportConfig, DatabaseConfig, SheetMappingConfig.
+- Processing result models (`src/models/processing_result.py`) for ProcessingResult, FileStat, MetricsSnapshot with batch timing stats.
+- Excel file models (`src/models/excel_file.py`, `src/models/sheet_process.py`, `src/models/row_data.py`) for file processing workflow.
+- Error record model (`src/models/error_record.py`) for structured error logging.
+
+Implemented services:
+- Orchestration service (`src/services/orchestrator.py`) for coordinating file processing workflow.
+- Summary service (`src/services/summary.py`) for SUMMARY line rendering from ProcessingResult.
+- Progress tracking (`src/services/progress.py`) for TTY progress indication.
+- FK propagation service (`src/services/fk_propagation.py`) for parent-child relationship handling.
+
+Pending (Phase 3.4+ tasks):
+1. CLI integration with orchestrator service (wire T020 with T027).
 2. Partial failure handling (exit code 2) + enabling skipped contract test.
-3. Metrics & SUMMARY field population (rows, elapsed_sec, throughput_rps, skipped_sheets real values).
-4. FK propagation + conditional RETURNING.
-5. Logging initialization with labeled lines (INFO/WARN/ERROR/SUMMARY) and progress output.
-6. Config schema contract test (root keys & structure) — to be added.
-7. Integration & performance tests with real DB / fixtures.
-8. Batch size tuning instrumentation.
-9. Enhanced error scenarios (sheet-level fatal, row=-1 sentinel) & ErrorRecord extension if needed.
+3. Logging initialization with labeled lines (INFO/WARN/ERROR/SUMMARY) and progress output integration.
+4. Config schema runtime validation (jsonschema integration).
+5. Integration & performance tests with real DB / fixtures.
+6. Batch size tuning instrumentation.
+7. Enhanced error scenarios (sheet-level fatal, row=-1 sentinel) testing.
 
 ## Coding Conventions
 - Python 3.11, type hints strict (`mypy --strict`).
 - Lint: ruff (line length 100). Keep new dependencies justified in `DECISIONS.md` first.
 - Tests first: add / update failing tests before implementation changes.
 - Keep layers acyclic: CLI -> services -> (models/domain) -> infra (excel/db/logging/util). Lower layers must not import higher.
+- Domain models in `src/models/` provide type-safe dataclasses for configuration, processing results, and workflow entities.
+- Services in `src/services/` coordinate cross-cutting concerns (orchestration, progress, metrics, FK relationships).
 
 ## Error Log Schema
 Keys: `timestamp`, `file`, `sheet`, `row`, `error_type`, `db_message` (no extras). `timestamp` UTC ISO8601 `...Z`.
@@ -63,4 +75,4 @@ Keys: `timestamp`, `file`, `sheet`, `row`, `error_type`, `db_message` (no extras
 - Avoid leaking DB credentials; rely on env precedence (FR-027).
 - Preserve high (>90%) coverage; expand tests with each new feature.
 
-_Last updated: 2025-09-26_
+_Last updated: 2025-10-03_

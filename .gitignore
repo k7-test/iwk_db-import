@@ -26,3 +26,16 @@ ENV/
 
 # ---- OS / Misc ----
 .DS_Store
+logs/
+
+# ---- Generated performance datasets ----
+# Avoid accidentally committing large datasets
+perf_dataset*.xlsx
+*_perf_*.xlsx
+
+# ---- Project local configuration & raw data ----
+# 明示的にバージョン管理対象外にする要求: ./data, ./config
+data/
+config/import.yml
+
+.env
