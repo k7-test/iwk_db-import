@@ -30,7 +30,7 @@ class SheetData:
 
 
 def read_excel_file(
-    path: Path, target_sheets: Iterable[str] | None = None
+    path: Path, target_sheets: Iterable[str] | None = None, keep_na_strings: list[str] | None = None
 ) -> dict[str, pd.DataFrame]:
     """Read an Excel file returning raw DataFrames keyed by sheet name.
 
@@ -38,13 +38,31 @@ def read_excel_file(
     ----------
     path: Excel ファイルパス
     target_sheets: 対象シート制限 (None なら全シート)
+    keep_na_strings: Pandasの既定NaN変換から除外する文字列リスト (例: ['NA'])
     """
+    # Pandas default NA values を取得し、keep_na_strings を除外
+    # pandas._libs.parsers.STR_NA_VALUES には既定のNA文字列集合が格納されている
+    import pandas._libs.parsers as parsers
+    
+    if keep_na_strings:
+        # 既定のNA値から keep_na_strings を除外
+        default_na = parsers.STR_NA_VALUES.copy()
+        custom_na = default_na - set(keep_na_strings)
+        na_values = list(custom_na)
+        keep_default_na = False
+    else:
+        # keep_na_strings が指定されていない場合は既定の動作
+        na_values = None
+        keep_default_na = True
+    
     dfs: dict[str, pd.DataFrame] = {}
     xls = pd.ExcelFile(path)
     for name in xls.sheet_names:
         if target_sheets is not None and str(name) not in target_sheets:
             continue
-        df = xls.parse(name, header=None)  # ヘッダなしで生読み (後で2行目をヘッダとして適用)
+        # ヘッダなしで生読み (後で2行目をヘッダとして適用)
+        # keep_default_na と na_values を指定して NA 変換を制御
+        df = xls.parse(name, header=None, keep_default_na=keep_default_na, na_values=na_values)
         dfs[str(name)] = df
     return dfs
 

@@ -339,7 +339,13 @@ def _process_single_file(
     
     try:
         # Read Excel file
-        raw_sheets = read_excel_file(file_path, target_sheets=set(sheet_mappings.keys()))
+        # Extract keep_na_strings from raw_config if available
+        keep_na_strings = list(raw_config.keep_na_strings) if raw_config.keep_na_strings else None
+        raw_sheets = read_excel_file(
+            file_path, 
+            target_sheets=set(sheet_mappings.keys()),
+            keep_na_strings=keep_na_strings
+        )
 
         total_inserted_rows = 0
         skipped_sheets = 0

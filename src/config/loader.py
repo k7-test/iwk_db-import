@@ -57,6 +57,7 @@ class ImportConfig:
     timezone: str
     database: DatabaseConfig
     null_sentinels: list[str] | None = None
+    keep_na_strings: list[str] | None = None
 
 
 def _validate_config_schema(data: dict[str, Any]) -> None:
@@ -117,4 +118,5 @@ def load_config(path: Path) -> ImportConfig:
         timezone=tz,
         database=db,
         null_sentinels=data.get("null_sentinels"),
+        keep_na_strings=data.get("keep_na_strings"),
     )

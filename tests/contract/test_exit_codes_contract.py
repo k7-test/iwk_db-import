@@ -38,7 +38,7 @@ def test_exit_code_all_success(temp_workdir: Path, write_config, dummy_excel_fil
     mock_sheet_data.columns = ["id", "name"]
     mock_sheet_data.rows = [{"id": 1, "name": "Test"}]
     
-    def mock_read_side_effect(path, target_sheets=None):
+    def mock_read_side_effect(path, target_sheets=None, keep_na_strings=None):
         if "customers" in str(path):
             return {"Customers": MagicMock()}
         else:  # orders.xlsx
@@ -81,7 +81,7 @@ def test_exit_code_partial_failure(temp_workdir: Path, write_config, capsys):
     mock_sheet_data.columns = ["id", "name"]
     mock_sheet_data.rows = [{"id": 1, "name": "Test"}]
     
-    def mock_read_side_effect(path, target_sheets=None):
+    def mock_read_side_effect(path, target_sheets=None, keep_na_strings=None):
         if "failure" in str(path):
             raise Exception("Simulated Excel read failure")
         return {"Customers": MagicMock()}  # Success case
