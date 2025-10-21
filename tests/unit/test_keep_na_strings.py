@@ -2,7 +2,6 @@
 from pathlib import Path
 
 import pandas as pd
-import pytest
 
 from src.excel.reader import normalize_sheet, read_excel_file
 
