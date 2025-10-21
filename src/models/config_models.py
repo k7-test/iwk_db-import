@@ -77,3 +77,4 @@ class ImportConfig:
     timezone: str  # Timezone for datetime processing (default: "UTC")
     database: DatabaseConfig  # Database connection fallback configuration
     null_sentinels: set[str] | None = None  # グローバルNULLサニタイズ文字列集合
+    keep_na_strings: set[str] | None = None  # PandasのNaN自動変換から除外する文字列集合

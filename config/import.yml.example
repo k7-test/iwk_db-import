@@ -80,6 +80,10 @@ null_sentinels:
   - "« NULL »"
   - "NULL"
   - "(NULL)"
+# Pandasの既定NaN変換から除外する文字列 (例: Excelに"NA"という文字列が含まれる場合)
+# 設定しない場合は既定の動作 (NA, N/A, null 等がNaNとして扱われる)
+keep_na_strings:
+  - "NA"
 # .envが優先されるためダミー
 database:
   host: localhost

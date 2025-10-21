@@ -21,6 +21,11 @@
       "description": "文字列セルを NULL とみなす値一覧 (大小区別なし, trim 後比較)",
       "items": { "type": "string" }
     },
+    "keep_na_strings": {
+      "type": "array",
+      "description": "Pandasの既定NaN変換から除外する文字列一覧 (例: ['NA'])",
+      "items": { "type": "string" }
+    },
     "sheet_mappings": {
       "type": "object",
       "description": "シート名→テーブル名マッピング",

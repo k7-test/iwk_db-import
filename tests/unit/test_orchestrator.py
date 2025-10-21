@@ -72,7 +72,7 @@ def test_process_all_mock_success(temp_workdir: Path, write_config: Path) -> Non
     (data_dir / "orders.xlsx").write_bytes(b"test")
     
     # Mock Excel reader to return test data - different sheets per file
-    def mock_read_side_effect(path, target_sheets=None):
+    def mock_read_side_effect(path, target_sheets=None, keep_na_strings=None):
         if "customers" in str(path):
             return {"Customers": MagicMock()}
         else:  # orders.xlsx
@@ -119,7 +119,7 @@ def test_process_all_partial_failure(temp_workdir: Path, write_config: Path) -> 
     mock_sheet_data.columns = ["id", "name"]
     mock_sheet_data.rows = [{"id": 1, "name": "Alice"}]
     
-    def mock_read_side_effect(path, target_sheets=None):
+    def mock_read_side_effect(path, target_sheets=None, keep_na_strings=None):
         if "broken" in str(path):
             raise Exception("Corrupted Excel file")
         return {"Customers": MagicMock()}
@@ -164,7 +164,7 @@ def test_process_all_with_database_transaction_rollback(
     mock_insert_result = MagicMock()
     mock_insert_result.inserted_rows = 1
     
-    def mock_read_side_effect(path, target_sheets=None):
+    def mock_read_side_effect(path, target_sheets=None, keep_na_strings=None):
         if "failure" in str(path):
             raise Exception("Simulated file processing failure")
         return {"Customers": MagicMock()}
@@ -313,7 +313,7 @@ def test_process_single_file_with_parent_returning_and_child_fk_propagation(temp
     ]
 
     # read_excel_file: ファイル別にシート名→ダミー DataFrame (後で normalize で置換)
-    def mock_read_side_effect(path, target_sheets=None):
+    def mock_read_side_effect(path, target_sheets=None, keep_na_strings=None):
         if 'parents' in str(path):
             return {'Parents': MagicMock()}
         return {'Children': MagicMock()}
