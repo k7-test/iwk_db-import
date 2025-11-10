@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from pathlib import Path
-from unittest.mock import patch, MagicMock
 from datetime import datetime, timedelta
+from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 from src.cli import main as cli_main
-from src.models.processing_result import ProcessingResult
 from src.logging.init import reset_logging
+from src.models.processing_result import ProcessingResult
 
 
 def test_cli_live_mode_success(temp_workdir: Path, write_config: Path, capsys):

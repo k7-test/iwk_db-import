@@ -52,6 +52,13 @@
               "type": "object",
               "description": "空セル時にNULLではなく適用する列名→デフォルト値マップ",
               "additionalProperties": true
+            },
+            "blob_columns": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Excelの値をファイルパスとしてpg_read_binary_file関数で読み込む列"
             }
           }
         }

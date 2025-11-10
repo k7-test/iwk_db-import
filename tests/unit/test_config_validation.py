@@ -178,3 +178,40 @@ def test_validate_config_schema_minimal_valid_config():
     }
     # Should not raise any exception
     _validate_config_schema(minimal_config)
+
+
+def test_validate_config_schema_with_blob_columns():
+    """Test that config with blob_columns passes validation."""
+    config_with_blob = {
+        "source_directory": "./data",
+        "sheet_mappings": {
+            "Sheet1": {
+                "table": "table1",
+                "blob_columns": ["file_content", "attachment"]
+            }
+        },
+        "sequences": {},
+        "fk_propagations": {},
+        "database": {}
+    }
+    # Should not raise any exception
+    _validate_config_schema(config_with_blob)
+
+
+def test_validate_config_schema_blob_columns_wrong_type():
+    """Test that blob_columns with wrong type fails validation."""
+    invalid_config = {
+        "source_directory": "./data",
+        "sheet_mappings": {
+            "Sheet1": {
+                "table": "table1",
+                "blob_columns": "not_an_array"  # should be array
+            }
+        },
+        "sequences": {},
+        "fk_propagations": {},
+        "database": {}
+    }
+    with pytest.raises(ConfigError) as e:
+        _validate_config_schema(invalid_config)
+    assert "config validation failed" in str(e.value)

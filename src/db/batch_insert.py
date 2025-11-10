@@ -53,6 +53,7 @@ def batch_insert(
     returning: bool = False,
     page_size: int = 1000,
     metrics_callback: Callable[[BatchMetrics], None] | None = None,
+    blob_columns: set[str] | None = None,
 ) -> InsertResult:
     """Perform batched INSERT using psycopg2.extras.execute_values.
 
@@ -78,6 +79,7 @@ def batch_insert(
             batch_insert(cursor, table, columns, rows, metrics_callback=callback)
             total, avg, p95 = accumulator.get_stats()
             # Use stats in FileStat construction
+    blob_columns: blob型の列名集合。これらの列はpg_read_binary_file()で読み込む
     """
     if execute_values is None:
         raise BatchInsertError("psycopg2 not available")
@@ -87,14 +89,33 @@ def batch_insert(
         return InsertResult(inserted_rows=0, returned_values=[] if returning else None)
 
     cols_sql = ",".join(f'"{c}"' for c in columns)
-    base_sql = f"INSERT INTO {table} ({cols_sql}) VALUES %s"
+    
+    # Build VALUES template with pg_read_binary_file for blob columns
+    if blob_columns:
+        # Create a template with proper placeholders for blob columns
+        value_placeholders = []
+        for col in columns:
+            if col in blob_columns:
+                value_placeholders.append("pg_read_binary_file(%s)")
+            else:
+                value_placeholders.append("%s")
+        template = f"({','.join(value_placeholders)})"
+        base_sql = f"INSERT INTO {table} ({cols_sql})"
+    else:
+        template = None
+        base_sql = f"INSERT INTO {table} ({cols_sql}) VALUES %s"
+    
     if returning:
         base_sql += " RETURNING *"  # 後続で必要列限定最適化予定 (FR-029)
 
     # T023: Batch timing instrumentation
     start_time = time.time()
     try:
-        execute_values(cursor, base_sql, rows_list, page_size=page_size)
+        if blob_columns:
+            # Use custom template with pg_read_binary_file for blob columns
+            execute_values(cursor, base_sql, rows_list, template=template, page_size=page_size)
+        else:
+            execute_values(cursor, base_sql, rows_list, page_size=page_size)
     except Exception as e:  # pragma: no cover - will be covered when real DB tests added
         raise BatchInsertError(str(e)) from e
     finally:
