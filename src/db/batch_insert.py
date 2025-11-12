@@ -111,11 +111,7 @@ def batch_insert(
     # T023: Batch timing instrumentation
     start_time = time.time()
     try:
-        if blob_columns:
-            # Use custom template with pg_read_binary_file for blob columns
-            execute_values(cursor, base_sql, rows_list, template=template, page_size=page_size)
-        else:
-            execute_values(cursor, base_sql, rows_list, page_size=page_size)
+        execute_values(cursor, base_sql, rows_list, template=template, page_size=page_size)
     except Exception as e:  # pragma: no cover - will be covered when real DB tests added
         raise BatchInsertError(str(e)) from e
     finally:
