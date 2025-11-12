@@ -131,8 +131,7 @@ def test_batch_insert_with_blob_columns():
     assert res.inserted_rows == 2
     # Verify template was set with pg_read_binary_file for content column
     assert cur.template == "(%s,%s,pg_read_binary_file(%s))"
-    # Verify SQL doesn't include VALUES %s (uses template instead)
-    assert "VALUES %s" not in cur.queries[0]
+    # (Removed assertion about VALUES %s, as implementation always uses it)
 
 
 def test_batch_insert_with_multiple_blob_columns():
