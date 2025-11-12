@@ -26,8 +26,7 @@ cur.execute(query, (args.id,))
 row = cur.fetchone()
 pic = row['file']
 
-f = open(row['name'], 'wb')
-f.write(pic)
-f.close()
+with open(row['name'], 'wb') as f:
+    f.write(pic)
 cur.close()
 conn.close()
