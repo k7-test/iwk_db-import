@@ -17,7 +17,10 @@ if not args.table.replace('_', '').isalnum():
     print("Invalid table name. Only alphanumeric characters and underscores are allowed.", file=sys.stderr)
     sys.exit(1)
 
-conn = psycopg2.connect(os.getenv('DATABASE_URL'))
+db_url = os.getenv('DATABASE_URL')
+if db_url is None:
+    raise RuntimeError("Environment variable DATABASE_URL is not set. Please set it before running this script.")
+conn = psycopg2.connect(db_url)
 
 cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 query = f"select id, name, file from {args.table} where id = %s;"
