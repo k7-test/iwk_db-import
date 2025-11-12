@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import time
 from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass
@@ -54,6 +55,7 @@ def batch_insert(
     page_size: int = 1000,
     metrics_callback: Callable[[BatchMetrics], None] | None = None,
     blob_columns: set[str] | None = None,
+    source_directory: str | None = None,
 ) -> InsertResult:
     """Perform batched INSERT using psycopg2.extras.execute_values.
 
@@ -79,7 +81,8 @@ def batch_insert(
             batch_insert(cursor, table, columns, rows, metrics_callback=callback)
             total, avg, p95 = accumulator.get_stats()
             # Use stats in FileStat construction
-    blob_columns: blob型の列名集合。これらの列はpg_read_binary_file()で読み込む
+    blob_columns: blob型の列名集合。これらの列はファイルパスとして扱い、バイナリデータを読み込む
+    source_directory: blob_columnsが指定されている場合、相対パスを解決するための基準ディレクトリ
     """
     if execute_values is None:
         raise BatchInsertError("psycopg2 not available")
@@ -88,22 +91,32 @@ def batch_insert(
     if not rows_list:
         return InsertResult(inserted_rows=0, returned_values=[] if returning else None)
 
+    # Convert blob column values from relative paths to absolute paths
+    # and read file contents
+    if blob_columns and source_directory:
+        blob_col_indices = [i for i, col in enumerate(columns) if col in blob_columns]
+        if blob_col_indices:
+            processed_rows = []
+            for row in rows_list:
+                row_list = list(row)
+                for idx in blob_col_indices:
+                    if row_list[idx] is not None:
+                        # Read file content as binary data
+                        rel_path = str(row_list[idx])
+                        abs_path = os.path.abspath(os.path.join(source_directory, rel_path))
+                        try:
+                            with open(abs_path, 'rb') as f:
+                                row_list[idx] = f.read()
+                        except Exception as e:
+                            raise BatchInsertError(f"Failed to read blob file {abs_path}: {e}") from e
+                processed_rows.append(tuple(row_list))
+            rows_list = processed_rows
+
     cols_sql = ",".join(f'"{c}"' for c in columns)
     
-    # Build VALUES template with pg_read_binary_file for blob columns
-    if blob_columns:
-        # Create a template with proper placeholders for blob columns
-        value_placeholders = []
-        for col in columns:
-            if col in blob_columns:
-                value_placeholders.append("pg_read_binary_file(%s)")
-            else:
-                value_placeholders.append("%s")
-        template = f"({','.join(value_placeholders)})"
-        base_sql = f"INSERT INTO {table} ({cols_sql})"
-    else:
-        template = None
-        base_sql = f"INSERT INTO {table} ({cols_sql}) VALUES %s"
+    # Build SQL - no special handling needed for blob columns now
+    # (binary data is already in rows_list from preprocessing above)
+    base_sql = f"INSERT INTO {table} ({cols_sql}) VALUES %s"
     
     if returning:
         base_sql += " RETURNING *"  # 後続で必要列限定最適化予定 (FR-029)
@@ -111,7 +124,7 @@ def batch_insert(
     # T023: Batch timing instrumentation
     start_time = time.time()
     try:
-        execute_values(cursor, base_sql, rows_list, template=template, page_size=page_size)
+        execute_values(cursor, base_sql, rows_list, page_size=page_size)
     except Exception as e:  # pragma: no cover - will be covered when real DB tests added
         raise BatchInsertError(str(e)) from e
     finally:

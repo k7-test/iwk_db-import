@@ -644,6 +644,7 @@ def _process_single_sheet(
                 returning=do_returning,
                 page_size=1000,  # R-006 default batch size
                 blob_columns=sheet_mapping.blob_columns,
+                source_directory=raw_config.source_directory,
             )
             inserted_rows = result.inserted_rows
             logger.debug(

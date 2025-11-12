@@ -36,6 +36,6 @@ perf_dataset*.xlsx
 # ---- Project local configuration & raw data ----
 # 明示的にバージョン管理対象外にする要求: ./data, ./config
 data/
-config/import.yml
+config/import*.yml
 
 .env
