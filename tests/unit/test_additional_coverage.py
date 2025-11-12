@@ -2,15 +2,13 @@ from __future__ import annotations
 
 from pathlib import Path
 from unittest.mock import MagicMock, patch
-from datetime import datetime
-import pytest
 
-from src.db.batch_insert import batch_insert, InsertResult, BatchMetrics
-from src.services.orchestrator import process_all, ProcessingError
-from src.services.fk_propagation import build_fk_propagation_maps, needs_returning
 from src.config.loader import load_config
-from src.models.config_models import SheetMappingConfig, DatabaseConfig, ImportConfig
+from src.db.batch_insert import BatchMetrics, batch_insert
 from src.excel.reader import MissingColumnsError
+from src.models.config_models import DatabaseConfig, ImportConfig
+from src.services.fk_propagation import build_fk_propagation_maps, needs_returning
+from src.services.orchestrator import process_all
 
 
 def test_orchestrator_commit_failure_triggers_rollback(temp_workdir: Path, write_config: Path):
@@ -92,7 +90,6 @@ def test_cli_inspect_data_mode(temp_workdir: Path, write_config: Path, capsys):
 
 def test_batch_insert_metrics_callback(monkeypatch):
     # execute_values を完全モックして cursor.connection 依存を排除
-    from src import db as db_pkg
     from src.db import batch_insert as bi_mod
     calls: list[tuple] = []
     def fake_execute_values(cur, sql, rows, page_size=100, fetch=False):  # noqa: D401

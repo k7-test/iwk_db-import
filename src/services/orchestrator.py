@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -12,20 +13,14 @@ from ..models.config_models import SheetMappingConfig as DomainSheetMappingConfi
 from ..models.excel_file import ExcelFile, FileStatus
 from ..models.processing_result import FileStat, ProcessingResult
 from ..models.sheet_process import SheetProcess
-from .progress import ProgressTracker, SheetProgressIndicator
 
 # FK 伝播サービス (T023 統合)
 from .fk_propagation import (
-    needs_returning,
-    build_fk_propagation_maps,
-    build_parent_pk_map,
-    get_column_index,
-    FKPropagationError,
     FKPropagationMap,
+    build_fk_propagation_maps,
+    needs_returning,
 )
-from ..config.loader import ImportConfig as LoaderImportConfig  # type: ignore
-from ..models.config_models import ImportConfig as DomainImportConfig  # for type clarity
-import logging
+from .progress import ProgressTracker, SheetProgressIndicator
 
 logger = logging.getLogger(__name__)
 
@@ -101,6 +96,9 @@ def _convert_config_to_domain_mappings(config: ImportConfig) -> dict[str, Domain
         fk_cols = set(mapping_data.get("fk_propagation_columns", []))
         default_vals = mapping_data.get("default_values") if isinstance(mapping_data, dict) else None
         
+        # Get blob columns for this sheet from the mapping data
+        blob_cols = set(mapping_data.get("blob_columns", []))
+        
         domain_mappings[sheet_name] = DomainSheetMappingConfig(
             sheet_name=sheet_name,
             table_name=table_name,
@@ -108,6 +106,7 @@ def _convert_config_to_domain_mappings(config: ImportConfig) -> dict[str, Domain
             fk_propagation_columns=fk_cols,
             default_values=default_vals,
             null_sentinels=global_nulls if global_nulls else None,
+            blob_columns=blob_cols if blob_cols else None,
         )
     
     return domain_mappings
@@ -643,7 +642,9 @@ def _process_single_sheet(
                 columns=insert_columns,
                 rows=insert_rows,
                 returning=do_returning,
-                page_size=1000   # R-006 default batch size
+                page_size=1000,  # R-006 default batch size
+                blob_columns=sheet_mapping.blob_columns,
+                source_directory=raw_config.source_directory,
             )
             inserted_rows = result.inserted_rows
             logger.debug(

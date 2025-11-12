@@ -117,7 +117,7 @@ def test_fk_propagation_integration(
     
     # Mock database operations to simulate FK propagation workflow
     def mock_batch_insert_side_effect(
-        cursor, table, columns, rows, returning=False, page_size=1000
+        cursor, table, columns, rows, returning=False, page_size=1000, metrics_callback=None, blob_columns=None
     ):
         """Mock batch_insert to simulate parent RETURNING and child FK propagation."""
         rows_list = list(rows)

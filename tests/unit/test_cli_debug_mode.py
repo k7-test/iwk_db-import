@@ -1,12 +1,12 @@
 from __future__ import annotations
 
+from datetime import datetime, timedelta
 from pathlib import Path
 from unittest.mock import patch
 
 from src.cli import main as cli_main
 from src.logging.init import reset_logging
 from src.models.processing_result import ProcessingResult
-from datetime import datetime, timedelta
 
 
 def test_cli_debug_mode_mock_disable_db(temp_workdir: Path, write_config: Path, capsys, monkeypatch):
