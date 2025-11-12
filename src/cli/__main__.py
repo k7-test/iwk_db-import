@@ -1,13 +1,14 @@
 from __future__ import annotations
 
+import argparse
 import os
-from typing import TYPE_CHECKING
 import sys
 from contextlib import contextmanager
 from pathlib import Path
-import argparse
+from typing import TYPE_CHECKING
 
 from src.config.loader import ConfigError, load_config
+
 try:  # pragma: no cover - import guard
     from dotenv import load_dotenv  # type: ignore
 except Exception:  # pragma: no cover
@@ -119,8 +120,8 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
 
 
 def _inspect_data(cfg) -> int:
-    from src.excel.reader import read_excel_file, normalize_sheet
-    import json
+
+    from src.excel.reader import normalize_sheet, read_excel_file
     directory = Path(cfg.source_directory)
     if not directory.exists():
         print(f"inspect: directory not found: {directory}")

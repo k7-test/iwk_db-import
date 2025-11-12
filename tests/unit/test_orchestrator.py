@@ -266,12 +266,11 @@ def test_process_single_file_with_parent_returning_and_child_fk_propagation(temp
       - sequences に parent PK 情報 (table.col 形式) を与え、cursor.description を利用して PK インデックス推定を通過。
       - batch_insert は parent で returning=True, child で returning=False で呼ばれる。
     """
+    from unittest.mock import MagicMock, patch
+
     from src.config.loader import load_config
-    from src.models.processing_result import ProcessingResult
-    from src.services.orchestrator import process_all
     from src.db.batch_insert import InsertResult
-    import types
-    from unittest.mock import patch, MagicMock
+    from src.services.orchestrator import process_all
 
     # 元の config 読み込み後に FK 設定 / sequences を上書き
     config = load_config(write_config)
@@ -322,7 +321,7 @@ def test_process_single_file_with_parent_returning_and_child_fk_propagation(temp
     parent_returned = [(1, 'Alice'), (2, 'Bob')]
     inserted_calls: list[tuple] = []
 
-    def mock_batch_insert(cursor, table, columns, rows, returning=False, page_size=1000, metrics_callback=None):  # noqa: D401
+    def mock_batch_insert(cursor, table, columns, rows, returning=False, page_size=1000, metrics_callback=None, blob_columns=None):  # noqa: D401
         inserted_calls.append((table, returning, list(rows)))
         if returning:
             return InsertResult(inserted_rows=len(rows), returned_values=parent_returned)

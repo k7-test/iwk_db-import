@@ -3,6 +3,7 @@ sheet_mappings:
   tr_iwk_10500:
     table: tr_iwk_10500
     sequence_columns: [triwk10500_instance_id]
+    blob_columns: [triwk10500_attached_file]
     default_values:
       triwk10500_hosoku: ""
   tr_iwk_10510:
