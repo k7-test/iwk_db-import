@@ -81,8 +81,8 @@ def batch_insert(
             batch_insert(cursor, table, columns, rows, metrics_callback=callback)
             total, avg, p95 = accumulator.get_stats()
             # Use stats in FileStat construction
-    blob_columns: blob型の列名集合。これらの列はファイルパスとして扱い、バイナリデータを読み込む
-    source_directory: blob_columnsが指定されている場合、相対パスを解決するための基準ディレクトリ
+    blob_columns: Set of column names that are of blob type. These columns are treated as file paths, and their binary data will be read from the files.
+    source_directory: Base directory used to resolve relative paths when blob_columns is specified.
     """
     if execute_values is None:
         raise BatchInsertError("psycopg2 not available")
