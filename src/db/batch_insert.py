@@ -114,8 +114,8 @@ def batch_insert(
 
     cols_sql = ",".join(f'"{c}"' for c in columns)
     
-    # Build SQL - no special handling needed for blob columns now
-    # (binary data is already in rows_list from preprocessing above)
+    # Build SQL - note: original requirement was to use pg_read_binary_file(%s) in SQL,
+    # but this implementation reads files in Python and passes binary data directly.
     base_sql = f"INSERT INTO {table} ({cols_sql}) VALUES %s"
     
     if returning:
